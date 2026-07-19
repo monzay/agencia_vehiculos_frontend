@@ -1,9 +1,10 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Boton } from "@/components/interfaz/boton";
 import { EncabezadoSeccion } from "@/components/encabezado-seccion";
 import { TarjetaVehiculo } from "@/components/tarjeta-vehiculo";
 import { filtrarVehiculos, obtenerMarcasFiltradas } from "@/lib/vehiculos";
+import { obtenerVehiculos } from "@/lib/api";
 import { Car, Bike } from "lucide-react";
 
 const TIPOS = [
@@ -71,6 +72,19 @@ function ContenidoCatalogo() {
   const [condicion, setCondicion] = useState("todos");
   const [marca, setMarca]     = useState("todas");
 
+  const [vehiculos, setVehiculos] = useState([]);
+  const [cargando, setCargando]   = useState(true);
+  const [error, setError]         = useState(null);
+
+  useEffect(() => {
+    let activo = true;
+    obtenerVehiculos()
+      .then((data) => { if (activo) setVehiculos(data); })
+      .catch((e) => { if (activo) setError(e.message); })
+      .finally(() => { if (activo) setCargando(false); });
+    return () => { activo = false; };
+  }, []);
+
   const handleTipo = (nuevoTipo) => {
     setTipo(nuevoTipo);
     setCondicion("todos");
@@ -83,21 +97,21 @@ function ContenidoCatalogo() {
   };
 
   const vehiculosFiltrados = useMemo(
-    () => filtrarVehiculos({ tipo, condicion, marca }),
-    [tipo, condicion, marca]
+    () => filtrarVehiculos(vehiculos, { tipo, condicion, marca }),
+    [vehiculos, tipo, condicion, marca]
   );
 
   const condicionesDisponibles = useMemo(() => {
-    const conTodos = filtrarVehiculos({ tipo, condicion: "todos" });
+    const conTodos = filtrarVehiculos(vehiculos, { tipo, condicion: "todos" });
     return {
       "0km":   conTodos.some((v) => v.condicion === "0km"),
       "usado": conTodos.some((v) => v.condicion === "usado"),
     };
-  }, [tipo]);
+  }, [vehiculos, tipo]);
 
   const marcasDisponibles = useMemo(
-    () => obtenerMarcasFiltradas({ tipo, condicion }),
-    [tipo, condicion]
+    () => obtenerMarcasFiltradas(vehiculos, { tipo, condicion }),
+    [vehiculos, tipo, condicion]
   );
 
   const subtitleMap = {
@@ -190,15 +204,34 @@ function ContenidoCatalogo() {
           </div>
         </div>
 
+        {/* Loading */}
+        {cargando && (
+          <div className="text-center py-16 text-muted-foreground text-base sm:text-lg">
+            Cargando vehículos…
+          </div>
+        )}
+
+        {/* Error */}
+        {!cargando && error && (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground text-base sm:text-lg mb-4">
+              No se pudieron cargar los vehículos. ¿Está el servidor de la API encendido?
+            </p>
+            <p className="text-xs text-muted-foreground/60">{error}</p>
+          </div>
+        )}
+
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {vehiculosFiltrados.map((vehicle, index) => (
-            <TarjetaVehiculo key={vehicle.id} vehicle={vehicle} index={index} />
-          ))}
-        </div>
+        {!cargando && !error && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {vehiculosFiltrados.map((vehicle, index) => (
+              <TarjetaVehiculo key={vehicle.id} vehicle={vehicle} index={index} />
+            ))}
+          </div>
+        )}
 
         {/* Empty state */}
-        {vehiculosFiltrados.length === 0 && (
+        {!cargando && !error && vehiculosFiltrados.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-base sm:text-lg mb-4">
               No hay vehículos disponibles con esos filtros.

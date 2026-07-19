@@ -1,9 +1,14 @@
-import { Instrument_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Archivo, Instrument_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-instrument"
+});
+// Titulares de la portada: grotesca industrial, pariente del logotipo SEA.
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo"
 });
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
@@ -23,7 +28,7 @@ function DisenoRaiz({
   children
 }) {
   return <html lang="es" className="bg-background">
-      <body className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${archivo.variable} font-sans antialiased`}>
         {children}
         <Analytics />
       </body>

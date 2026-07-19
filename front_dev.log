@@ -1,0 +1,71 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+[32m✔[0m [33mConsole Ninja[0m extension is connected to [33mNext.js[0m, see [36mhttps://tinyurl.com/2vt8jxzw[0m
+⚠ Console Ninja Turbopack support is a PRO feature, [33mcurrently available to community users while in preview[0m
+   ▲ Next.js 16.0.10 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.100.55:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ GET / 200 in 5.7s (compile: 5.4s, render: 337ms)
+ GET /vehiculos/motomel_skua.jpeg 404 in 848ms (compile: 338ms, render: 511ms)
+ GET /vehiculos/tvs_160.jpeg 404 in 1108ms (compile: 463ms, render: 646ms)
+ GET /images/hero.png 404 in 1744ms (compile: 1124ms, render: 620ms)
+ GET /vehiculos/gol_trend_2018.jpeg 404 in 1101ms (compile: 509ms, render: 592ms)
+ GET /vehiculos/motomel_skua_200.jfif 404 in 1113ms (compile: 538ms, render: 574ms)
+ GET /vehiculos/up.jpeg 404 in 1127ms (compile: 776ms, render: 351ms)
+ GET /placeholder.svg 404 in 1208ms (compile: 498ms, render: 710ms)
+ ○ Compiling /admin ...
+ GET /admin 200 in 3.6s (compile: 3.4s, render: 202ms)
+ GET /login 200 in 2.3s (compile: 1983ms, render: 349ms)
+ GET /login 200 in 64ms (compile: 7ms, render: 57ms)
+ GET /admin 200 in 29ms (compile: 7ms, render: 22ms)
+ GET /admin 200 in 94ms (compile: 18ms, render: 77ms)
+ GET / 200 in 75ms (compile: 12ms, render: 63ms)
+ GET /placeholder.svg 404 in 58ms (compile: 21ms, render: 37ms)
+ GET /admin 200 in 50ms (compile: 5ms, render: 45ms)
+ GET /admin 200 in 67ms (compile: 9ms, render: 58ms)
+ GET /vehiculos/fiat_palio.jpeg 404 in 370ms (compile: 122ms, render: 248ms)
+ GET /vehiculos/fiat_palio_sporting_2013.jpeg 404 in 371ms (compile: 94ms, render: 277ms)
+ GET /vehiculos/fiat_palio_atractive.jfif 404 in 378ms (compile: 63ms, render: 315ms)
+ GET /vehiculos/fiat_uno_rojo.jpeg 404 in 375ms (compile: 239ms, render: 136ms)
+ GET /vehiculos/ford_faltcon.jfif 404 in 374ms (compile: 212ms, render: 162ms)
+ GET /vehiculos/fiat_toro.jpeg 404 in 384ms (compile: 186ms, render: 198ms)
+ GET /vehiculos/ford_ranger_xls_mod_2009.jpeg 404 in 313ms (compile: 70ms, render: 243ms)
+ GET /vehiculos/ford%20ka.jpeg 404 in 319ms (compile: 52ms, render: 267ms)
+ GET /vehiculos/motomel_skua.jpeg 404 in 317ms (compile: 128ms, render: 189ms)
+ GET /vehiculos/parnet.jpeg 404 in 285ms (compile: 181ms, render: 104ms)
+ GET /vehiculos/motomel_skua_200.jfif 404 in 289ms (compile: 167ms, render: 122ms)
+ GET /vehiculos/duster.jpeg 404 in 206ms (compile: 150ms, render: 56ms)
+ GET /vehiculos/tvs_160.jpeg 404 in 292ms (compile: 65ms, render: 226ms)
+ GET /vehiculos/renault_fluence.jfif 404 in 294ms (compile: 50ms, render: 244ms)
+ GET /vehiculos/gol_trend_2018.jpeg 404 in 288ms (compile: 122ms, render: 166ms)
+ GET /vehiculos/up.jpeg 404 in 262ms (compile: 148ms, render: 114ms)
+ GET /vehiculos/gol_trend_2010.png 404 in 264ms (compile: 132ms, render: 132ms)
+ GET /vehiculos/boyage.jfif 404 in 196ms (compile: 138ms, render: 58ms)
+ GET /vehiculos/fz.jfif 404 in 55ms (compile: 17ms, render: 38ms)
+ GET /vehiculos/fiat_palio_sporting_2013.jpeg 404 in 411ms (compile: 89ms, render: 322ms)
+ GET /vehiculos/fiat_palio_atractive.jfif 404 in 419ms (compile: 61ms, render: 358ms)
+ GET /vehiculos/ford_faltcon.jfif 404 in 390ms (compile: 232ms, render: 158ms)
+ GET /vehiculos/fiat_uno_rojo.jpeg 404 in 394ms (compile: 211ms, render: 182ms)
+ GET /vehiculos/fiat_toro.jpeg 404 in 406ms (compile: 192ms, render: 214ms)
+ GET /vehiculos/fiat_palio.jpeg 404 in 426ms (compile: 175ms, render: 251ms)
+ GET /vehiculos/ford%20ka.jpeg 404 in 350ms (compile: 67ms, render: 282ms)
+ GET /vehiculos/duster.jpeg 404 in 336ms (compile: 211ms, render: 125ms)
+ GET /vehiculos/parnet.jpeg 404 in 344ms (compile: 197ms, render: 146ms)
+ GET /vehiculos/motomel_skua_200.jfif 404 in 347ms (compile: 171ms, render: 176ms)
+ GET /vehiculos/motomel_skua.jpeg 404 in 349ms (compile: 133ms, render: 217ms)
+ GET /vehiculos/ford_ranger_xls_mod_2009.jpeg 404 in 354ms (compile: 107ms, render: 248ms)
+ GET /vehiculos/tvs_160.jpeg 404 in 321ms (compile: 88ms, render: 232ms)
+ GET /vehiculos/renault_fluence.jfif 404 in 329ms (compile: 73ms, render: 256ms)
+ GET /vehiculos/up.jpeg 404 in 313ms (compile: 191ms, render: 121ms)
+ GET /vehiculos/gol_trend_2010.png 404 in 319ms (compile: 169ms, render: 150ms)
+ GET /vehiculos/gol_trend_2018.jpeg 404 in 323ms (compile: 141ms, render: 182ms)
+ GET /vehiculos/boyage.jfif 404 in 279ms (compile: 214ms, render: 64ms)
+ GET /vehiculos/fz.jfif 404 in 72ms (compile: 18ms, render: 54ms)
+ GET /admin 200 in 63ms (compile: 10ms, render: 53ms)

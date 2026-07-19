@@ -83,6 +83,59 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+}
+
+/* ── Tema del PANEL de administración — minimalista MONO (scopeado, NO afecta el sitio público) ──
+   Paleta neutra (croma 0): el acento es el contraste blanco/grises. El color se reserva
+   exclusivamente para estados con significado (destructive/warning/success y los chart-*). */
+.panel-dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.975 0 0);
+  --card: oklch(0.175 0 0);
+  --card-foreground: oklch(0.975 0 0);
+  --popover: oklch(0.185 0 0);
+  --popover-foreground: oklch(0.975 0 0);
+  /* Acción primaria = blanco con texto casi-negro (look Vercel) */
+  --primary: oklch(0.975 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.215 0 0);
+  --secondary-foreground: oklch(0.975 0 0);
+  --muted: oklch(0.215 0 0);
+  --muted-foreground: oklch(0.635 0 0);
+  /* Acento mono: highlights, foco y barras activas en blanco */
+  --accent: oklch(0.975 0 0);
+  --accent-foreground: oklch(0.145 0 0);
+  --destructive: oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.975 0 0);
+  --border: oklch(0.265 0 0);
+  --input: oklch(0.225 0 0);
+  --ring: oklch(0.72 0 0);
+  /* Series de datos: neutras por defecto; color SOLO donde aporta significado */
+  --chart-1: oklch(0.62 0.13 245); /* FRÍO  → azul */
+  --chart-2: oklch(0.72 0 0);      /* neutro (barras genéricas) */
+  --chart-3: oklch(0.78 0.15 75);  /* TIBIO → ámbar */
+  --chart-4: oklch(0.62 0.21 25);  /* CALIENTE → rojo */
+  --chart-5: oklch(0.55 0 0);      /* neutro secundario */
+  --sidebar: oklch(0.155 0 0);
+  --sidebar-foreground: oklch(0.975 0 0);
+  --sidebar-primary: oklch(0.975 0 0);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.215 0 0);
+  --sidebar-accent-foreground: oklch(0.975 0 0);
+  --sidebar-border: oklch(0.255 0 0);
+  --sidebar-ring: oklch(0.72 0 0);
+  --success: oklch(0.7 0.15 155);
+  --warning: oklch(0.78 0.15 75);
+  /* Esquinas más suaves para el minimalismo cálido */
+  --radius: 0.625rem;
+  /* Elevación sutil (sombras, no glow) — usar vía shadow-[var(--shadow-*)] */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.30);
+  --shadow-md: 0 4px 16px -2px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 16px 48px -8px rgb(0 0 0 / 0.60);
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @layer base {
@@ -215,9 +268,106 @@
   
   .border-sketch {
     border: 1px solid transparent;
-    background: 
+    background:
       linear-gradient(var(--background), var(--background)) padding-box,
       linear-gradient(135deg, var(--foreground) 25%, transparent 25%, transparent 50%, var(--foreground) 50%, var(--foreground) 75%, transparent 75%) border-box;
     background-size: 100% 100%, 8px 8px;
+  }
+
+  /* Grilla técnica sutil de fondo (aire de plano/blueprint automotor). */
+  .grilla-tecnica {
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px);
+    background-size: 76px 76px;
+  }
+
+  /* Reveal al entrar en viewport (se combina con el hook usarEnVista). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── PORTADA — dirección "showroom SEA" (scopeada a .home, no afecta catálogo ni panel) ──
+   La paleta sale del local real: el piso claro y brillante del showroom, la marquesina
+   grafito del cartel y el rojo del logo como único acento. */
+.home {
+  --piso: oklch(0.975 0.002 250);      /* canvas: piso de showroom */
+  --nieve: oklch(1 0 0);               /* tarjetas y hero */
+  --tinta: oklch(0.18 0.012 260);      /* texto principal */
+  --humo: oklch(0.55 0.012 260);       /* texto secundario */
+  --linea: oklch(0.90 0.004 260);      /* bordes de un pelo */
+  --grafito: oklch(0.21 0.012 260);    /* marquesina: cierre y pie */
+  --rojo: var(--brand);
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+  --sombra-baja: 0 1px 2px oklch(0.18 0.012 260 / 0.04), 0 10px 30px -18px oklch(0.18 0.012 260 / 0.35);
+  --sombra-alta: 0 2px 6px oklch(0.18 0.012 260 / 0.06), 0 30px 60px -28px oklch(0.18 0.012 260 / 0.45);
+
+  background-color: var(--piso);
+  color: var(--tinta);
+}
+
+@layer utilities {
+  /* Titulares: grotesca industrial, pariente del logotipo SEA. */
+  .tipo-titulo {
+    font-family: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.94;
+    text-transform: uppercase;
+  }
+
+  /* Firma de la portada: la luz del showroom cruzando la chapa.
+     Se dispara una vez al cargar el hero (-carga) y vuelve, apenas, en hover (-hover).
+     No fija `position`: quien la usa ya es relative o absolute, y declararla acá
+     pisaría a las utilidades de Tailwind (misma capa, misma especificidad). */
+  .pasada-luz {
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .pasada-luz::after {
+    content: '';
+    position: absolute;
+    inset: -20% -40%;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 38%,
+      oklch(1 0 0 / 0.20) 47%,
+      oklch(1 0 0 / 0.45) 50%,
+      oklch(1 0 0 / 0.20) 53%,
+      transparent 62%
+    );
+    transform: translateX(-115%);
+  }
+  .pasada-luz-carga::after {
+    animation: pasada 2.6s var(--curva) 0.45s 1 forwards;
+  }
+  .pasada-luz-hover::after {
+    transition: transform 1.1s var(--curva);
+  }
+  .group:hover .pasada-luz-hover::after {
+    transform: translateX(115%);
+  }
+  @keyframes pasada {
+    to { transform: translateX(115%); }
+  }
+}
+
+/* Accesibilidad: respetar reduced-motion en todo el sitio. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

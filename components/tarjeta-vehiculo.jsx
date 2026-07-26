@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
 import Image from "next/image";
-import { ArrowUpRight, X, BadgePercent, Gift } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, BadgePercent, Gift } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { usarEnVista } from "@/hooks/usar-en-vista";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
@@ -35,14 +35,6 @@ function etiquetaPromo(p) {
 
 function TarjetaVehiculo({ vehicle, index = 0 }) {
   const { ref, estaVisible } = usarEnVista();
-  const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (!modalOpen) return;
-    const onKey = (e) => e.key === "Escape" && setModalOpen(false);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [modalOpen]);
 
   const abrirBot = () =>
     window.open(obtenerUrlWhatsAppBotVehiculo(vehicle), "_blank", "noopener,noreferrer");
@@ -60,12 +52,11 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
         style={{ transitionDelay: `${index * 90}ms` }}
         className={`reveal ${estaVisible ? "visible" : ""} group flex flex-col bg-card border border-foreground/12 hover:border-foreground/40 transition-colors duration-500`}
       >
-        {/* Foto */}
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="relative aspect-4/3 overflow-hidden bg-secondary"
-          aria-label={`Ampliar ${obtenerNombreCompletoVehiculo(vehicle)}`}
+        {/* Foto → ficha completa del vehículo */}
+        <Link
+          href={`/catalogo/${vehicle.ref}`}
+          className="relative block aspect-4/3 overflow-hidden bg-secondary"
+          aria-label={`Ver ${obtenerNombreCompletoVehiculo(vehicle)}`}
         >
           <Image
             src={vehicle.image}
@@ -89,7 +80,7 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
               <BadgePercent className="w-3 h-3" /> Oferta
             </span>
           )}
-        </button>
+        </Link>
 
         {/* Cuerpo */}
         <div className="flex flex-col flex-1 p-5 lg:p-6">
@@ -175,34 +166,6 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
         {/* Filete rojo inferior que crece en hover (acento de marca) */}
         <span className="h-0.5 w-0 bg-brand transition-all duration-500 group-hover:w-full" aria-hidden="true" />
       </article>
-
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg p-4"
-          onClick={() => setModalOpen(false)}
-        >
-          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={vehicle.image}
-              alt={obtenerNombreCompletoVehiculo(vehicle)}
-              width={1600}
-              height={1200}
-              sizes="(max-width: 896px) 100vw, 896px"
-              className="w-full h-auto max-h-[85vh] object-contain"
-            />
-            <button
-              onClick={() => setModalOpen(false)}
-              className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center bg-black/50 hover:bg-brand transition-colors"
-              aria-label="Cerrar"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-            <p className="mt-3 font-mono text-[10px] tracking-[0.3em] text-white/40 uppercase text-right">
-              {obtenerNombreCompletoVehiculo(vehicle)} · {vehicle.year}
-            </p>
-          </div>
-        </div>
-      )}
     </>
   );
 }

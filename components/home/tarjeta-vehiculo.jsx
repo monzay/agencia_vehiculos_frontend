@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, BadgePercent, Gift } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
@@ -46,7 +47,11 @@ function TarjetaVehiculoHome({ vehiculo }) {
       whileHover={{ y: -8, transition: RESORTE }}
       className="group flex flex-col rounded-2xl bg-[var(--nieve)] border border-[var(--linea)] shadow-[var(--sombra-baja)] hover:shadow-[var(--sombra-alta)] transition-shadow duration-500 ease-[var(--curva)]"
     >
-      <div className="relative aspect-[4/3] rounded-t-2xl overflow-hidden bg-[var(--piso)] pasada-luz pasada-luz-hover">
+      <Link
+        href={`/catalogo/${vehiculo.ref}`}
+        aria-label={`Ver ${obtenerNombreCompletoVehiculo(vehiculo)}`}
+        className="relative block aspect-[4/3] rounded-t-2xl overflow-hidden bg-[var(--piso)] pasada-luz pasada-luz-hover"
+      >
         <Image
           src={vehiculo.image}
           alt={obtenerNombreCompletoVehiculo(vehiculo)}
@@ -69,7 +74,7 @@ function TarjetaVehiculoHome({ vehiculo }) {
             <BadgePercent className="w-3 h-3" /> Oferta
           </span>
         )}
-      </div>
+      </Link>
 
       <div className="flex flex-col flex-1 p-5 lg:p-6">
         <h3 className="tipo-titulo text-xl text-[var(--tinta)]">

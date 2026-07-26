@@ -19,12 +19,12 @@ export function GrupoConfig({ titulo, descripcion, children }) {
 
 // Cabecera de tarjeta liviana: ícono sutil en línea con el título (sin el chip
 // relleno), descripción debajo y un lugar opcional para una acción a la derecha.
-export function CabeceraTarjeta({ icon: Icon, titulo, descripcion, accion }) {
+export function CabeceraTarjeta({ icon: Icon, titulo, descripcion, accion, iconClassName }) {
   return (
     <CardHeader>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+          {Icon && <Icon className={`w-4 h-4 shrink-0 ${iconClassName || "text-muted-foreground"}`} />}
           <CardTitle className="text-base truncate">{titulo}</CardTitle>
         </div>
         {accion}

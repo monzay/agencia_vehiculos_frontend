@@ -95,6 +95,7 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
     <Card>
       <CabeceraTarjeta
         icon={Clock}
+        iconClassName="text-white"
         titulo="Horarios de atención"
         descripcion="El bot los usa para responder si la agencia está abierta. Apagá el día para marcarlo cerrado."
       />
@@ -118,7 +119,7 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
                       value={d.apertura}
                       onChange={(e) => set(dia, "apertura", e.target.value)}
                       disabled={guardando}
-                      className="w-32"
+                      className="w-32 scheme-dark"
                     />
                     <span className="text-sm text-muted-foreground">a</span>
                     <Input
@@ -127,7 +128,7 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
                       value={d.cierre}
                       onChange={(e) => set(dia, "cierre", e.target.value)}
                       disabled={guardando}
-                      className="w-32"
+                      className="w-32 scheme-dark"
                     />
                   </div>
                 ) : (

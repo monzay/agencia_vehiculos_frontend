@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, BadgePercent, Gift } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
+import { useNombreAgencia } from "@/lib/negocio";
 import { RESORTE, subida } from "./movimiento";
 
 const COMBUSTIBLE = { nafta: "Nafta", gnc: "GNC", diesel: "Diésel" };
@@ -35,6 +36,7 @@ function Dato({ rotulo, children }) {
 // resorte mientras la luz del showroom le pasa por encima. Consultar abre WhatsApp
 // con la REF ya cargada, que es como el bot ata la conversación.
 function TarjetaVehiculoHome({ vehiculo }) {
+  const nombreAgencia = useNombreAgencia();
   const sinKms = vehiculo.condicion === "usado" && vehiculo.kms === 0;
   // Beneficios VIGENTES (la API ya filtra los vencidos).
   const descuento = vehiculo.ahorro > 0 ? vehiculo.descuento : null;
@@ -123,7 +125,7 @@ function TarjetaVehiculoHome({ vehiculo }) {
             <p className="tipo-titulo text-2xl tabular-nums text-[var(--tinta)]">A consultar</p>
           )}
           <a
-            href={obtenerUrlWhatsAppBotVehiculo(vehiculo)}
+            href={obtenerUrlWhatsAppBotVehiculo(vehiculo, nombreAgencia)}
             target="_blank"
             rel="noopener noreferrer"
             className="group/cta inline-flex items-center gap-1 text-sm font-medium text-[var(--tinta)] hover:text-[var(--rojo)] transition-colors duration-300"

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
+import { useNombreAgencia } from "@/lib/negocio";
 import { obtenerVehiculo } from "@/lib/api";
 
 const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
@@ -101,9 +102,10 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
   const sinKm = vehiculo.condicion === "usado" && vehiculo.kms === 0;
   const descuento = vehiculo.ahorro > 0 ? vehiculo.descuento : null;
   const promos = vehiculo.promociones ?? [];
+  const nombreAgencia = useNombreAgencia();
 
   const abrirBot = () =>
-    window.open(obtenerUrlWhatsAppBotVehiculo(vehiculo), "_blank", "noopener,noreferrer");
+    window.open(obtenerUrlWhatsAppBotVehiculo(vehiculo, nombreAgencia), "_blank", "noopener,noreferrer");
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">

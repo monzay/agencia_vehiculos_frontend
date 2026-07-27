@@ -5,6 +5,7 @@ import { ArrowUpRight, BadgePercent, Gift } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { usarEnVista } from "@/hooks/usar-en-vista";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
+import { useNombreAgencia } from "@/lib/negocio";
 
 // Etiqueta de dato tipo "ficha técnica" (odómetro): rótulo mono + valor.
 function Dato({ rotulo, children }) {
@@ -35,9 +36,10 @@ function etiquetaPromo(p) {
 
 function TarjetaVehiculo({ vehicle, index = 0 }) {
   const { ref, estaVisible } = usarEnVista();
+  const nombreAgencia = useNombreAgencia();
 
   const abrirBot = () =>
-    window.open(obtenerUrlWhatsAppBotVehiculo(vehicle), "_blank", "noopener,noreferrer");
+    window.open(obtenerUrlWhatsAppBotVehiculo(vehicle, nombreAgencia), "_blank", "noopener,noreferrer");
 
   const sinKm = vehicle.condicion === "usado" && vehicle.kms === 0;
   // Beneficios VIGENTES: la API ya filtra descuento/promos vencidos.

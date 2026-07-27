@@ -32,14 +32,14 @@ function InsigniaModalidad({ modalidad }) {
   return <Insignia variante={m.variante}>{m.etiqueta}</Insignia>;
 }
 
-// Las fechas vienen como hora local etiquetada UTC → se formatean con timeZone UTC.
+// Los timestamps se guardan en UTC y se muestran en hora de Argentina.
 function soloFecha(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-AR", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(iso).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" });
 }
 function soloHora(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("es-AR", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(iso).toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 function tituloVenta(v = {}) {

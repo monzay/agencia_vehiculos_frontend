@@ -58,16 +58,16 @@ export function nombreCanal(canal) {
   return CANALES[canal] ?? canal ?? "—";
 }
 
-// Las fechas de la DB son hora local de la agencia (Argentina) pero Prisma las
-// entrega etiquetadas como UTC (MySQL DATETIME es naive). Por eso se formatea con
-// timeZone:"UTC": así se muestra EXACTAMENTE el reloj que quedó guardado, sin la
-// re-conversión del navegador (que restaba 3 h de más).
+// Los timestamps se guardan en UTC (la base de producción corre en UTC) y Prisma
+// los entrega etiquetados como UTC. Se muestran convertidos a hora de Argentina.
+const ZONA_AR = "America/Argentina/Buenos_Aires";
+
 export function formatearFecha(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d)) return "—";
   return d.toLocaleString("es-AR", {
-    timeZone: "UTC",
+    timeZone: ZONA_AR,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -83,13 +83,13 @@ export function partesFecha(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return { fecha: "—", hora: "" };
   const fecha = d.toLocaleDateString("es-AR", {
-    timeZone: "UTC",
+    timeZone: ZONA_AR,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
   const hora = d.toLocaleTimeString("es-AR", {
-    timeZone: "UTC",
+    timeZone: ZONA_AR,
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -101,10 +101,8 @@ export function tiempoRelativo(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d)) return "—";
-  // "Ahora" se lleva al mismo marco que las fechas guardadas (wall-clock como UTC),
-  // corriendo el offset local, para que "recién" no muestre "hace 3 h".
-  const ahora = Date.now() - new Date().getTimezoneOffset() * 60000;
-  const segs = Math.floor((ahora - d.getTime()) / 1000);
+  // Ambos son instantes UTC reales, así que la diferencia es directa.
+  const segs = Math.floor((Date.now() - d.getTime()) / 1000);
   if (segs < 60) return "recién";
   const min = Math.floor(segs / 60);
   if (min < 60) return `hace ${min} min`;

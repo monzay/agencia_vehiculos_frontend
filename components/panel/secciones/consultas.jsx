@@ -60,9 +60,9 @@ const COLUMNAS = [
 
 function fechaHora(iso) {
   if (!iso) return "—";
-  // timeZone UTC: las fechas ya vienen como hora local etiquetada UTC (ver formatearFecha).
+  // Los timestamps se guardan en UTC y se muestran en hora de Argentina.
   return new Date(iso).toLocaleString("es-AR", {
-    timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
 }
 

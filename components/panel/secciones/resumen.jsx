@@ -29,11 +29,22 @@ export function SeccionResumen({ resumen }) {
     obtenerMetricas().then(setMetricas).catch(() => setMetricas(null));
   }, []);
 
-  // Todo sale del resumen (agregados calculados en el server), sin la lista completa.
+  // Consultas acumuladas: la serie anual de `fluctuacion` no tiene recorte
+  // temporal, así que sumarla da el histórico completo sin pedir nada más.
+  const consultas = (metricas?.fluctuacion?.anio ?? []).reduce(
+    (a, p) => ({
+      total: a.total + (p.consultas ?? 0),
+      CALIENTE: a.CALIENTE + (p.CALIENTE ?? 0),
+      TIBIO: a.TIBIO + (p.TIBIO ?? 0),
+      FRIO: a.FRIO + (p.FRIO ?? 0),
+    }),
+    { total: 0, CALIENTE: 0, TIBIO: 0, FRIO: 0 }
+  );
+
   const datosClasif = [
-    { name: "Calientes", key: "CALIENTE", value: resumen?.calientes ?? 0 },
-    { name: "Tibios", key: "TIBIO", value: resumen?.tibios ?? 0 },
-    { name: "Fríos", key: "FRIO", value: resumen?.frios ?? 0 },
+    { name: "Calientes", key: "CALIENTE", value: consultas.CALIENTE },
+    { name: "Tibias", key: "TIBIO", value: consultas.TIBIO },
+    { name: "Frías", key: "FRIO", value: consultas.FRIO },
   ];
   const topAutos = resumen?.topAutos ?? [];
 
@@ -44,10 +55,11 @@ export function SeccionResumen({ resumen }) {
         <h3 className="text-sm font-semibold text-foreground mb-3">Resumen general</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <TarjetaMetrica titulo="Total clientes" valor={resumen?.total ?? 0} icon={Users} color="text-foreground" delay={0} />
-        <TarjetaMetrica titulo="Calientes" valor={resumen?.calientes ?? 0} icon={Flame} color="text-destructive" delay={1} />
-        <TarjetaMetrica titulo="Tibios" valor={resumen?.tibios ?? 0} icon={Thermometer} color="text-warning" delay={2} />
-        <TarjetaMetrica titulo="Fríos" valor={resumen?.frios ?? 0} icon={Snowflake} color="text-chart-1" delay={3} />
+        <TarjetaMetrica titulo="Consultas calientes" valor={consultas.CALIENTE} icon={Flame} color="text-destructive" delay={1} />
+        <TarjetaMetrica titulo="Consultas tibias" valor={consultas.TIBIO} icon={Thermometer} color="text-warning" delay={2} />
+        <TarjetaMetrica titulo="Consultas frías" valor={consultas.FRIO} icon={Snowflake} color="text-chart-1" delay={3} />
         <TarjetaMetrica titulo="Quieren vender" valor={metricas?.ventasTotal ?? resumen?.ventas ?? 0} icon={Tag} color="text-chart-5" delay={4} />
+        <TarjetaMetrica titulo="Consultas totales" valor={consultas.total} icon={MessageSquare} color="text-foreground" delay={5} />
         </div>
       </div>
 

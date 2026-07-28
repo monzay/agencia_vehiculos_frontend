@@ -6,12 +6,36 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const MAX_ENTRADA = 10 * 1024 * 1024; // 10 MB de entrada (antes de optimizar)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+// Valida el JWT del panel contra el backend (sin duplicar el secreto en el front)
+// y exige rol admin: subir imágenes es una acción del panel, no algo público.
+// Devuelve true solo si el token es válido y pertenece a un admin.
+async function esAdmin(request) {
+  const auth = request.headers.get("authorization") || "";
+  if (!auth.startsWith("Bearer ")) return false;
+  try {
+    const res = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: auth },
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const json = await res.json().catch(() => ({}));
+    return json?.data?.rol === "admin";
+  } catch {
+    return false;
+  }
+}
 
 // Recibe un archivo de imagen, lo optimiza con sharp (auto-orienta + descarta EXIF,
 // redimensiona a 1600px máx sin agrandar, y comprime a JPEG progresivo) y lo guarda
 // en Vercel Blob (público). Devuelve { url }. Token: BLOB_READ_WRITE_TOKEN del entorno.
 export async function POST(request) {
   try {
+    if (!(await esAdmin(request))) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
+
     const form = await request.formData();
     const file = form.get("file");
 

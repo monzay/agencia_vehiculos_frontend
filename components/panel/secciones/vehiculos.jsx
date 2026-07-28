@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Car, Plus, Pencil, Trash2, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw } from "lucide-react";
-import { crearVehiculo, actualizarVehiculo, eliminarVehiculo } from "@/lib/api";
+import { crearVehiculo, actualizarVehiculo, eliminarVehiculo, getToken } from "@/lib/api";
 import { Overlay } from "../ui/overlay";
 import { ConfirmarModal } from "../ui/confirmar-modal";
 
@@ -145,7 +145,11 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     }
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/blob/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "No se pudo subir la imagen.");
     return data.url;

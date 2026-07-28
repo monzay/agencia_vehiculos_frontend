@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Upload, Trash2, Loader2, ImageOff } from "lucide-react";
-import { obtenerEntregas, crearEntrega, eliminarEntrega } from "@/lib/api";
+import { obtenerEntregas, crearEntrega, eliminarEntrega, getToken } from "@/lib/api";
 import { Boton } from "../ui/boton";
 import { ConfirmarModal } from "../ui/confirmar-modal";
 
@@ -20,7 +20,11 @@ async function subirArchivo(file) {
   }
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
+  const res = await fetch("/api/blob/upload", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: fd,
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "No se pudo subir la imagen.");
   return data.url;

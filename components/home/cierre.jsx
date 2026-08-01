@@ -1,109 +1,109 @@
 "use client";
 import { motion } from "framer-motion";
-import { MessageCircle, MapPin, Clock } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { INFO_NEGOCIO, obtenerUrlWhatsAppPredeterminada, ENLACES_SOCIALES } from "@/lib/constantes";
 import { ENLACES } from "./datos";
-import { VISTA, escalonado, subida, LineaTitulo, BotonMagnetico } from "./movimiento";
+import { VISTA, escalonado, subida, subidaCorta } from "./movimiento";
+import { MARGENES } from "./estructura";
 
 const ANIO = new Date().getFullYear();
 
-// Cierre y pie comparten la banda grafito: es la marquesina negra del cartel del local,
-// el único lugar oscuro de la página y donde vive la acción principal. El botón de
-// WhatsApp es magnético: se inclina hacia el cursor para pedir el último click.
+// Cierre en claro, después de la banda oscura de Contacto: la página abre con
+// una foto a sangre y termina en papel en blanco. La última llamada a la acción
+// es un titular grande y un enlace subrayado — el mismo enlace del hero, cerrando
+// el círculo — y debajo, el pie con los datos duros.
 function Cierre() {
+  // El ancla #contacto vive en la sección Contacto (dirección, horarios y mapa);
+  // acá quedó solo el resumen del pie para no repetir el id en la misma página.
   return (
-    <footer id="contacto" className="bg-[var(--grafito)] text-[var(--nieve)]">
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-10">
-        {/* Llamada a la acción */}
-        <motion.div
-          initial="oculto"
-          whileInView="visible"
-          viewport={VISTA}
-          variants={escalonado(0.12)}
-          className="py-20 lg:py-28 flex flex-col lg:flex-row lg:items-end justify-between gap-10"
+    <footer className={MARGENES}>
+      <motion.div
+        initial="oculto"
+        whileInView="visible"
+        viewport={VISTA}
+        variants={escalonado(0.12)}
+        className="flex flex-col justify-between gap-10 py-24 md:py-32 lg:flex-row lg:items-end"
+      >
+        <div>
+          <motion.h2
+            variants={subida}
+            className="titular text-[clamp(2.25rem,5vw,4rem)] text-balance text-[var(--tinta)]"
+          >
+            ¿Encontraste el tuyo?
+          </motion.h2>
+          <motion.p
+            variants={subida}
+            className="mt-6 max-w-md text-sm leading-[1.75] text-[var(--humo)]"
+          >
+            Escribinos por WhatsApp: te pasamos precio, cuotas y qué te tomamos por tu
+            usado. Sin vueltas.
+          </motion.p>
+        </div>
+        <motion.a
+          variants={subidaCorta}
+          href={obtenerUrlWhatsAppPredeterminada()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex w-fit shrink-0 items-center gap-3 border-b border-[var(--tinta)]/30 pb-2 text-base text-[var(--tinta)] transition-colors duration-500 hover:border-[var(--tinta)]"
         >
-          <div>
-            <h2 className="tipo-titulo text-[clamp(2.25rem,5vw,4rem)]">
-              <LineaTitulo>¿Encontraste</LineaTitulo>
-              <LineaTitulo>el tuyo?</LineaTitulo>
-            </h2>
-            <motion.p variants={subida} className="mt-5 max-w-md text-white/60 leading-relaxed">
-              Escribinos por WhatsApp: te pasamos precio, cuotas y qué te tomamos por tu
-              usado. Sin vueltas.
-            </motion.p>
-          </div>
-          <motion.div variants={subida} className="shrink-0">
-            <BotonMagnetico
-              href={obtenerUrlWhatsAppPredeterminada()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group inline-flex items-center justify-center gap-2.5 h-16 px-10 rounded-full bg-[var(--rojo)] text-white text-lg font-medium hover:brightness-110 transition-[filter] duration-300"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Escribir por WhatsApp
-            </BotonMagnetico>
-          </motion.div>
-        </motion.div>
+          Escribir por WhatsApp
+          <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+        </motion.a>
+      </motion.div>
 
-        {/* Pie */}
-        <motion.div
-          initial="oculto"
-          whileInView="visible"
-          viewport={VISTA}
-          variants={escalonado(0.08)}
-          className="border-t border-white/10 py-12 grid gap-10 md:grid-cols-3"
-        >
-          <motion.div variants={subida}>
-            <span className="tipo-titulo text-xl">{INFO_NEGOCIO.name}</span>
-            <p className="mt-4 flex items-start gap-2.5 text-sm text-white/60 leading-relaxed">
-              <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-[var(--rojo)]" />
-              {INFO_NEGOCIO.address}, {INFO_NEGOCIO.city}
-            </p>
-          </motion.div>
+      <div className="grid grid-cols-1 gap-12 border-t border-[var(--linea)] py-16 md:grid-cols-12 md:gap-8">
+        <div className="md:col-span-5">
+          <p className="rotulo text-[var(--tinta)]">{INFO_NEGOCIO.name}</p>
+          <p className="mt-5 max-w-xs text-sm leading-[1.75] text-[var(--humo)]">
+            {INFO_NEGOCIO.address}, {INFO_NEGOCIO.city}, {INFO_NEGOCIO.province}.
+          </p>
+        </div>
 
-          <motion.div variants={subida} className="flex items-start gap-2.5 text-sm text-white/60">
-            <Clock className="w-4 h-4 mt-0.5 shrink-0 text-[var(--rojo)]" />
-            <div className="space-y-1">
-              <p>{INFO_NEGOCIO.hours.weekdays}</p>
-              <p>{INFO_NEGOCIO.hours.saturday}</p>
-              <p>{INFO_NEGOCIO.hours.sunday}</p>
-            </div>
-          </motion.div>
-
-          <motion.nav variants={subida} className="flex flex-col gap-2.5 text-sm">
+        <nav className="md:col-span-3 md:col-start-7">
+          <p className="rotulo text-[var(--humo)]/60">Navegación</p>
+          <div className="mt-5 flex flex-col gap-3">
             {ENLACES.map((enlace) => (
               <a
                 key={enlace.href}
                 href={enlace.href}
-                className="text-white/60 hover:text-white transition-colors duration-300 w-fit"
+                className="w-fit text-sm text-[var(--humo)] transition-colors duration-300 hover:text-[var(--tinta)]"
               >
                 {enlace.nombre}
               </a>
             ))}
             <a
               href="/catalogo"
-              className="text-white/60 hover:text-white transition-colors duration-300 w-fit"
+              className="w-fit text-sm text-[var(--humo)] transition-colors duration-300 hover:text-[var(--tinta)]"
             >
               Catálogo completo
             </a>
-          </motion.nav>
-        </motion.div>
-
-        <div className="border-t border-white/10 py-8 flex flex-wrap items-center justify-between gap-4 text-xs text-white/40">
-          <p>
-            © {ANIO} {INFO_NEGOCIO.name} · {INFO_NEGOCIO.city}, {INFO_NEGOCIO.province}
-          </p>
-          <div className="flex gap-5">
-            {ENLACES_SOCIALES.filter((r) => r.href).map((red) => (
-              <a
-                key={red.name}
-                href={red.href}
-                className="hover:text-white transition-colors duration-300"
-              >
-                {red.name}
-              </a>
-            ))}
           </div>
+        </nav>
+
+        <div className="md:col-span-3 md:col-start-10">
+          <p className="rotulo text-[var(--humo)]/60">Horarios</p>
+          <div className="mt-5 flex flex-col gap-2 text-sm text-[var(--humo)]">
+            <p>{INFO_NEGOCIO.hours.weekdays}</p>
+            <p>{INFO_NEGOCIO.hours.saturday}</p>
+            <p>{INFO_NEGOCIO.hours.sunday}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-start justify-between gap-4 border-t border-[var(--linea)] py-8 md:flex-row md:items-center">
+        <p className="rotulo text-[var(--humo)]/60">
+          © {ANIO} {INFO_NEGOCIO.name}
+        </p>
+        <div className="flex gap-8">
+          {ENLACES_SOCIALES.filter((r) => r.href).map((red) => (
+            <a
+              key={red.name}
+              href={red.href}
+              className="rotulo text-[var(--humo)]/60 transition-colors duration-300 hover:text-[var(--tinta)]"
+            >
+              {red.name}
+            </a>
+          ))}
         </div>
       </div>
     </footer>

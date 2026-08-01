@@ -2,11 +2,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowUpRight, BadgePercent, Gift } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
-import { RESORTE, subida } from "./movimiento";
+import { subida } from "./movimiento";
 
 const COMBUSTIBLE = { nafta: "Nafta", gnc: "GNC", diesel: "Diésel" };
 
@@ -23,115 +23,123 @@ function etiquetaPromo(p) {
   return p.descuento_tipo === "monto" ? `-${formatearPrecio(p.descuento)}` : `-${p.descuento}%`;
 }
 
-function Dato({ rotulo, children }) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-[0.12em] text-[var(--humo)]">{rotulo}</dt>
-      <dd className="mt-0.5 text-sm font-medium tabular-nums text-[var(--tinta)]">{children}</dd>
-    </div>
-  );
+// La ficha técnica entra como una sola línea de rótulo —"2021 / 48.000 km /
+// Nafta"— y no como tres columnas rotuladas. En una grilla de seis unidades,
+// tres micro-tablas por tarjeta compiten con el nombre del vehículo, que es lo
+// que la persona está buscando.
+function lineaTecnica(vehiculo) {
+  const sinKms = vehiculo.condicion === "usado" && vehiculo.kms === 0;
+  return [
+    vehiculo.year,
+    sinKms ? null : `${vehiculo.kms.toLocaleString("es-AR")} km`,
+    COMBUSTIBLE[vehiculo.combustible],
+  ]
+    .filter(Boolean)
+    .join(" / ");
 }
 
-// Tarjeta de la portada: entra en la cascada del grid y, al apuntarla, se eleva con
-// resorte mientras la luz del showroom le pasa por encima. Consultar abre WhatsApp
-// con la REF ya cargada, que es como el bot ata la conversación.
-function TarjetaVehiculoHome({ vehiculo }) {
+// Tarjeta de la portada. Vive dentro de una grilla de filos (gap-px sobre el
+// color de línea), así que no lleva borde ni sombra propios: la separación la
+// pone la grilla. Lo único que se mueve al apuntarla es la foto.
+//
+// El rojo aparece únicamente si hay un beneficio vigente. Es la regla de color
+// de toda la portada: si algo está en rojo, cuesta menos.
+function TarjetaVehiculoHome({ vehiculo, indice }) {
   const nombreAgencia = useNombreAgencia();
-  const sinKms = vehiculo.condicion === "usado" && vehiculo.kms === 0;
   // Beneficios VIGENTES (la API ya filtra los vencidos).
   const descuento = vehiculo.ahorro > 0 ? vehiculo.descuento : null;
   const promos = vehiculo.promociones ?? [];
-  const tieneBeneficio = Boolean(descuento) || promos.length > 0;
 
   return (
-    <motion.article
-      variants={subida}
-      whileHover={{ y: -8, transition: RESORTE }}
-      className="group flex flex-col rounded-2xl bg-[var(--nieve)] border border-[var(--linea)] shadow-[var(--sombra-baja)] hover:shadow-[var(--sombra-alta)] transition-shadow duration-500 ease-[var(--curva)]"
-    >
+    <motion.article variants={subida} className="group flex flex-col bg-[var(--piso)]">
       <Link
         href={`/catalogo/${vehiculo.ref}`}
         aria-label={`Ver ${obtenerNombreCompletoVehiculo(vehiculo)}`}
-        className="relative block aspect-[4/3] rounded-t-2xl overflow-hidden bg-[var(--piso)] pasada-luz pasada-luz-hover"
+        className="relative block aspect-[4/3] overflow-hidden bg-[var(--nieve)]"
       >
         <Image
           src={vehiculo.image}
           alt={obtenerNombreCompletoVehiculo(vehiculo)}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
           className="object-cover transition-transform duration-[1200ms] ease-[var(--curva)] group-hover:scale-[1.04]"
         />
-        <div className="absolute top-3 left-3 z-[3] flex gap-1.5">
-          {vehiculo.condicion === "0km" && (
-            <span className="rounded-full bg-[var(--rojo)] text-white text-[11px] font-medium px-2.5 py-1">
-              0 km
-            </span>
-          )}
-          <span className="rounded-full bg-[var(--nieve)]/90 backdrop-blur-sm text-[var(--tinta)] text-[11px] font-medium px-2.5 py-1">
-            {vehiculo.tipo === "moto" ? "Moto" : "Auto"}
-          </span>
-        </div>
-        {tieneBeneficio && (
-          <span className="absolute top-3 right-3 z-[3] inline-flex items-center gap-1 rounded-full bg-[var(--rojo)] text-white text-[11px] font-medium px-2.5 py-1">
-            <BadgePercent className="w-3 h-3" /> Oferta
+        {vehiculo.condicion === "0km" && (
+          <span className="rotulo absolute left-4 top-4 bg-[var(--piso)] px-2.5 py-1.5 text-[var(--tinta)]">
+            0 km
           </span>
         )}
       </Link>
 
-      <div className="flex flex-col flex-1 p-5 lg:p-6">
-        <h3 className="tipo-titulo text-xl text-[var(--tinta)]">
-          {vehiculo.brand} <span className="text-[var(--humo)]">{vehiculo.model}</span>
-        </h3>
+      <div className="flex flex-1 flex-col p-6 md:p-8">
+        <div className="flex items-start gap-4">
+          <span className="rotulo cifra mt-1.5 shrink-0 text-[var(--humo)]/50 transition-colors duration-500 group-hover:text-[var(--tinta)]">
+            {String(indice + 1).padStart(2, "0")}
+          </span>
+          <div>
+            <h3 className="titular text-lg text-[var(--tinta)] md:text-xl">
+              {vehiculo.brand} {vehiculo.model}
+            </h3>
+            {/* La regla crece al apuntar la tarjeta: es el único movimiento
+                además del zoom de la foto, y alcanza para señalar el foco. */}
+            <span
+              className="mt-4 block h-px w-8 bg-[var(--linea)] transition-all duration-700 ease-[var(--curva)] group-hover:w-16"
+              aria-hidden="true"
+            />
+            <p className="rotulo mt-4 text-[var(--humo)]">{lineaTecnica(vehiculo)}</p>
+          </div>
+        </div>
 
-        <dl className="mt-4 grid grid-cols-3 gap-3 border-y border-[var(--linea)] py-4">
-          <Dato rotulo="Año">{vehiculo.year}</Dato>
-          <Dato rotulo="Kms">{sinKms ? "—" : vehiculo.kms.toLocaleString("es-AR")}</Dato>
-          <Dato rotulo="Motor">{COMBUSTIBLE[vehiculo.combustible] ?? "—"}</Dato>
-        </dl>
-
-        {/* Beneficios vigentes: descuento del vehículo y/o promociones */}
-        {tieneBeneficio && (
-          <div className="mt-4 flex flex-col gap-1.5">
+        {/* Beneficios vigentes: descuento del vehículo y/o promociones. */}
+        {(descuento || promos.length > 0) && (
+          <ul className="mt-5 flex flex-col gap-1.5 pl-10">
             {descuento && (
-              <p className="inline-flex items-center gap-1.5 text-sm text-[var(--tinta)]">
-                <BadgePercent className="w-4 h-4 text-[var(--rojo)] shrink-0" />
-                <span className="font-medium">{descuento.nombre}</span>
-                <span className="text-[var(--rojo)] font-semibold">{etiquetaDescuento(descuento)}</span>
-                {descuento.fecha_fin && <span className="text-[var(--humo)] text-xs">· hasta {fechaCorta(descuento.fecha_fin)}</span>}
-              </p>
+              <li className="text-sm text-[var(--humo)]">
+                {descuento.nombre}{" "}
+                <span className="text-[var(--rojo)]">{etiquetaDescuento(descuento)}</span>
+                {descuento.fecha_fin && ` · hasta ${fechaCorta(descuento.fecha_fin)}`}
+              </li>
             )}
             {promos.map((p) => (
-              <p key={p.id} className="inline-flex items-center gap-1.5 text-sm text-[var(--tinta)]">
-                <Gift className="w-4 h-4 text-[var(--rojo)] shrink-0" />
-                <span className="font-medium">{p.nombre}</span>
-                {etiquetaPromo(p) && <span className="text-[var(--rojo)] font-semibold">{etiquetaPromo(p)}</span>}
-                {p.fecha_fin && <span className="text-[var(--humo)] text-xs">· hasta {fechaCorta(p.fecha_fin)}</span>}
-              </p>
+              <li key={p.id} className="text-sm text-[var(--humo)]">
+                {p.nombre}{" "}
+                {etiquetaPromo(p) && (
+                  <span className="text-[var(--rojo)]">{etiquetaPromo(p)}</span>
+                )}
+                {p.fecha_fin && ` · hasta ${fechaCorta(p.fecha_fin)}`}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
-        <div className="mt-5 flex items-end justify-between gap-3">
+        <div className="mt-auto flex items-end justify-between gap-4 pt-8 pl-10">
           {vehiculo.precio > 0 ? (
             descuento ? (
               <div>
-                <span className="block text-sm text-[var(--humo)] line-through tabular-nums">{formatearPrecio(vehiculo.precio)}</span>
-                <p className="tipo-titulo text-2xl tabular-nums text-[var(--rojo)]">{formatearPrecio(vehiculo.precio_final)}</p>
+                <span className="cifra block text-xs text-[var(--humo)] line-through">
+                  {formatearPrecio(vehiculo.precio)}
+                </span>
+                <p className="cifra mt-1 text-xl text-[var(--rojo)]">
+                  {formatearPrecio(vehiculo.precio_final)}
+                </p>
               </div>
             ) : (
-              <p className="tipo-titulo text-2xl tabular-nums text-[var(--tinta)]">{formatearPrecio(vehiculo.precio)}</p>
+              <p className="cifra text-xl text-[var(--tinta)]">
+                {formatearPrecio(vehiculo.precio)}
+              </p>
             )
           ) : (
-            <p className="tipo-titulo text-2xl tabular-nums text-[var(--tinta)]">A consultar</p>
+            <p className="cifra text-xl text-[var(--humo)]">A consultar</p>
           )}
+
           <a
             href={obtenerUrlWhatsAppBotVehiculo(vehiculo, nombreAgencia)}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/cta inline-flex items-center gap-1 text-sm font-medium text-[var(--tinta)] hover:text-[var(--rojo)] transition-colors duration-300"
+            className="group/cta inline-flex items-center gap-2 border-b border-[var(--linea)] pb-1 text-sm text-[var(--tinta)] transition-colors duration-500 hover:border-[var(--tinta)]"
           >
             Consultar
-            <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5" />
+            <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5" />
           </a>
         </div>
       </div>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Sin foto disponible">
+  <!-- Placeholder de vehículo sin foto. Vive en la paleta nocturna del sitio
+       público para que un hueco no parezca un error de carga. -->
+  <defs>
+    <pattern id="reticula" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0v40" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="halo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="600" fill="#16181d"/>
+  <rect width="800" height="600" fill="url(#reticula)"/>
+  <rect width="800" height="600" fill="url(#halo)"/>
+
+  <g transform="translate(400 292)" fill="none" stroke="#6b7280" stroke-width="10"
+     stroke-linecap="round" stroke-linejoin="round" opacity="0.55">
+    <path d="M-96 16h192M-104 16v-22l26-52a20 20 0 0 1 18-11h120a20 20 0 0 1 18 11l26 52v22"/>
+    <circle cx="-58" cy="34" r="18"/>
+    <circle cx="58" cy="34" r="18"/>
+  </g>
+
+  <text x="400" y="392" text-anchor="middle" fill="#6b7280" opacity="0.8"
+        font-family="'JetBrains Mono', ui-monospace, monospace" font-size="15" letter-spacing="4">
+    SIN FOTO
+  </text>
+</svg>

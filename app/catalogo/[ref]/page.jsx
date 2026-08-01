@@ -1,5 +1,6 @@
-import { Navegacion } from "@/components/portada/navegacion";
-import { SeccionPie } from "@/components/portada/seccion-pie";
+import { Navegacion } from "@/components/inicio/navegacion";
+import { SeccionPie } from "@/components/inicio/seccion-pie";
+import { BotonWhatsApp } from "@/components/inicio/boton-whatsapp";
 import { DetalleVehiculo } from "@/components/catalogo/detalle-vehiculo";
 
 const metadata = {
@@ -11,10 +12,12 @@ const metadata = {
 async function PaginaDetalleVehiculo({ params }) {
   const { ref } = await params;
   return (
-    <main className="relative min-h-screen overflow-x-hidden noise-overlay">
+    // `inicio`: misma dirección visual que la portada y que el listado.
+    <main className="inicio relative min-h-screen overflow-x-clip noise-overlay">
       <Navegacion />
       <DetalleVehiculo refVehiculo={ref} />
       <SeccionPie />
+      <BotonWhatsApp />
     </main>
   );
 }

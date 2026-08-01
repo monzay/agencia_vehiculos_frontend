@@ -1,8 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { Boton } from "@/components/interfaz/boton";
-import { EncabezadoSeccion } from "@/components/encabezado-seccion";
-import { TarjetaVehiculo } from "@/components/tarjeta-vehiculo";
+import { EncabezadoSeccion } from "@/components/inicio/encabezado-seccion";
+import { TarjetaVehiculo } from "@/components/inicio/tarjeta-vehiculo";
 import { filtrarVehiculos, obtenerMarcasFiltradas } from "@/lib/vehiculos";
 import { obtenerVehiculos } from "@/lib/api";
 import { Car, Bike } from "lucide-react";
@@ -18,6 +18,17 @@ const CONDICIONES = [
   { value: "0km",    label: "0 km" },
   { value: "usado",  label: "Usados" },
 ];
+
+// Rótulo de filtro: mismo gesto que el de las secciones de la portada —mono
+// chico precedido por el filete rojo—.
+function RotuloFiltro({ children }) {
+  return (
+    <span className="inline-flex items-center gap-3 font-mono text-sm text-muted-foreground">
+      <span className="w-5 h-px bg-brand" />
+      {children}
+    </span>
+  );
+}
 
 function PildoraTipo({ value, label, icon: Icon, activo, onClick }) {
   return (
@@ -124,10 +135,10 @@ function ContenidoCatalogo() {
     <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-40 lg:pb-32">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
         <EncabezadoSeccion
-          eyebrow="Catalogo completo"
-          title="Todos nuestros vehiculos"
+          eyebrow="Catálogo completo"
+          title="Todos nuestros vehículos"
           subtitle={subtitleMap[tipo]}
-          description="Encontra el vehiculo perfecto para vos."
+          description="Encontrá el vehículo perfecto para vos."
         />
 
         {/* ── Filtros ── */}
@@ -135,9 +146,7 @@ function ContenidoCatalogo() {
 
           {/* Tipo */}
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-muted-foreground tracking-wider uppercase">
-              Tipo de vehículo
-            </p>
+            <RotuloFiltro>Tipo de vehículo</RotuloFiltro>
             <div className="flex flex-wrap gap-2">
               {TIPOS.map((t) => (
                 <PildoraTipo
@@ -153,9 +162,7 @@ function ContenidoCatalogo() {
           {/* Condicion — solo se muestra si hay un tipo seleccionado */}
           {tipo !== "todos" && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground tracking-wider uppercase">
-                Condición
-              </p>
+              <RotuloFiltro>Condición</RotuloFiltro>
               <div className="flex flex-wrap gap-2">
                 {CONDICIONES.map((c) => (
                   <PildoraCondicion
@@ -173,9 +180,7 @@ function ContenidoCatalogo() {
           {/* Marca — solo se muestra si hay más de una marca disponible */}
           {marcasDisponibles.length > 1 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground tracking-wider uppercase">
-                Marca
-              </p>
+              <RotuloFiltro>Marca</RotuloFiltro>
               <div className="flex flex-wrap gap-2">
                 <PildoraMarca
                   label="Todas"
@@ -204,10 +209,12 @@ function ContenidoCatalogo() {
           </div>
         </div>
 
-        {/* Loading */}
+        {/* Loading: mismos huecos que la grilla, como en la portada. */}
         {cargando && (
-          <div className="text-center py-16 text-muted-foreground text-base sm:text-lg">
-            Cargando vehículos…
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[28rem] animate-pulse bg-secondary" />
+            ))}
           </div>
         )}
 
@@ -237,8 +244,8 @@ function ContenidoCatalogo() {
               No hay vehículos disponibles con esos filtros.
             </p>
             <Boton
-              variant="outline"
-              className="rounded-full text-sm"
+              size="lg"
+              className="rounded-full px-8 h-12 text-sm bg-brand text-white hover:bg-white hover:text-brand border-0 hover:border hover:border-brand transition-all duration-300"
               onClick={() => { setTipo("todos"); setCondicion("todos"); setMarca("todas"); }}
             >
               Ver todos los vehículos

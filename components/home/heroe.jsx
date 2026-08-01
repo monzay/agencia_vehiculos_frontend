@@ -1,136 +1,249 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowUpRight } from "lucide-react";
+import { formatearPrecio } from "@/lib/vehiculos";
 import { INFO_NEGOCIO, obtenerUrlWhatsApp } from "@/lib/constantes";
 import { GARANTIAS } from "./datos";
-import { escalonado, subida, subidaCorta, destapeFoto, LineaTitulo } from "./movimiento";
+import { escalonado, subida, subidaCorta } from "./movimiento";
+import { MARGENES } from "./estructura";
+import { useStock } from "./stock";
 
 const CONSULTA = "Hola SEA Automotores! Quería hacer una consulta.";
+const PAUSA = 6000;
 
-// La foto del showroom ya viene difuminada a blanco por la izquierda: el hero se apoya
-// en eso. Al cargar, la foto se destapa de derecha a izquierda mientras el titular
-// emerge línea por línea; al scrollear, la foto queda apenas rezagada (parallax).
+// Tres unidades y no una: el hero tiene que mostrar la AMPLITUD del stock, así
+// que se elige una por marca antes de repetir. Si no alcanzan las marcas,
+// completa con lo que haya. Solo entran las que tienen foto — el hero es una
+// imagen a sangre y una tarjeta sin foto lo deja en negro.
+function elegirPortadas(vehiculos = []) {
+  const conFoto = vehiculos.filter((v) => v.image);
+  const marcas = new Set();
+  const unaPorMarca = [];
+  const resto = [];
+  for (const v of conFoto) {
+    if (marcas.has(v.brand)) resto.push(v);
+    else {
+      marcas.add(v.brand);
+      unaPorMarca.push(v);
+    }
+  }
+  return [...unaPorMarca, ...resto].slice(0, 3);
+}
+
+// Filos de la franja de garantías. En dos columnas el corte es la segunda
+// celda de cada fila más la línea entre filas; en cuatro, una sola fila con
+// tres cortes verticales. Se calcula acá para no ensuciar el JSX con cinco
+// condicionales encadenados.
+function celdaGarantia(i) {
+  const filo = "border-[var(--linea)]";
+  return [
+    "py-8",
+    i % 2 === 1 ? `border-l pl-6 ${filo}` : "",
+    i >= 2 ? `border-t ${filo}` : "",
+    i > 0 ? `lg:border-l lg:pl-8 ${filo}` : "lg:border-l-0",
+    "lg:border-t-0",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Hero. La única imagen grande de la portada son unidades REALES del stock: no
+// hay foto de archivo en ninguna parte del sitio, y es deliberado — el titular
+// dice que lo que se ve está en el showroom, así que la foto tiene que salir
+// del mismo catálogo que el visitante puede abrir.
+//
+// Las tres unidades pasan solas, salvo que las estés mirando. La ficha de datos
+// y los índices numerados de la derecha son lo que convierte el fondo en
+// contenido: el hero deja de ser una foto con un titular encima y pasa a ser la
+// primera pieza de catálogo de la página.
+//
+// Si la API no responde, el velo queda sobre el canvas grafito y el hero sigue
+// funcionando: el texto nunca depende de que la foto cargue.
 function Heroe() {
-  const refSeccion = useRef(null);
+  const stock = useStock();
+  const [indice, setIndice] = useState(0);
+  const [detenido, setDetenido] = useState(false);
+  const menosMovimiento = useReducedMotion();
 
-  // Parallax: mientras el hero sale de pantalla, la foto lo sigue a menor velocidad.
-  const { scrollYProgress } = useScroll({
-    target: refSeccion,
-    offset: ["start start", "end start"],
-  });
-  const yFoto = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
+  const portadas = elegirPortadas(stock ?? []);
+  const activa = portadas[indice] ?? null;
+  const total = stock?.length ?? null;
+
+  useEffect(() => {
+    if (portadas.length < 2 || detenido || menosMovimiento) return;
+    const reloj = setInterval(
+      () => setIndice((i) => (i + 1) % portadas.length),
+      PAUSA,
+    );
+    return () => clearInterval(reloj);
+  }, [portadas.length, detenido, menosMovimiento]);
 
   return (
-    <motion.section
-      ref={refSeccion}
-      initial="oculto"
-      animate="visible"
-      variants={escalonado(0.11, 0.15)}
-      className="relative bg-[var(--nieve)] overflow-hidden"
-    >
-      {/* Foto de fondo (desktop): se destapa al cargar y la luz la cruza una vez */}
-      <motion.div
-        variants={destapeFoto}
-        className="hidden lg:block absolute inset-y-0 right-0 w-[68%] pasada-luz pasada-luz-carga will-change-transform"
+    <>
+      <section
+        onPointerEnter={() => setDetenido(true)}
+        onPointerLeave={() => setDetenido(false)}
+        className="relative flex h-svh min-h-[36rem] flex-col justify-end overflow-hidden bg-[var(--grafito)]"
       >
-        <motion.div style={{ y: yFoto }} className="absolute -inset-y-[10%] inset-x-0">
-          <Image
-            src="/images/hero.png"
-            alt="Clientes recibiendo las llaves de su auto en el showroom de SEA Automotores"
-            fill
-            priority
-            sizes="68vw"
-            className="object-cover object-right"
-          />
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--nieve)] via-[var(--nieve)]/40 to-transparent" />
-        {/* Velo superior: la nav vive sobre la foto y necesita apoyarse en claro para leerse. */}
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[var(--nieve)] via-[var(--nieve)]/70 to-transparent" />
-      </motion.div>
+        <AnimatePresence>
+          {activa && (
+            <motion.div
+              key={activa.ref ?? activa.id}
+              initial={{ opacity: 0, scale: 1.06 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ opacity: { duration: 1.2 }, scale: { duration: 7, ease: "linear" } }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={activa.image}
+                alt={`${activa.brand} ${activa.model} en el showroom de ${INFO_NEGOCIO.name}`}
+                fill
+                priority={indice === 0}
+                sizes="100vw"
+                className="object-cover"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="relative max-w-[1320px] mx-auto px-6 lg:px-10 pt-32 pb-14 lg:pt-48 lg:pb-24">
-        <div className="max-w-xl lg:max-w-3xl">
-          <motion.span
-            variants={subidaCorta}
-            className="inline-flex items-center gap-2.5 text-sm text-[var(--humo)]"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--rojo)]" aria-hidden="true" />
-            {INFO_NEGOCIO.name} · {INFO_NEGOCIO.city}
-          </motion.span>
+        {/* Doble velo: uno plano que baja el contraste general de la chapa y
+            otro en degradado que carga el pie, que es donde vive el texto. */}
+        <div className="absolute inset-0 bg-[var(--grafito)]/55" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-[var(--grafito)] via-[var(--grafito)]/25 to-transparent"
+          aria-hidden="true"
+        />
 
-          {/* Titular editorial: cada línea sube desde adentro de su máscara */}
-          <h1 className="tipo-titulo mt-6 text-balance text-[clamp(2.15rem,5.6vw,4.5rem)] text-[var(--tinta)]">
-            <LineaTitulo>Tu próximo auto</LineaTitulo>
-            <LineaTitulo>
-              está a <span className="text-[var(--rojo)]">un mensaje</span>
-            </LineaTitulo>
-          </h1>
-
-          <motion.p
-            variants={subida}
-            className="mt-7 max-w-lg text-base lg:text-lg leading-relaxed text-[var(--humo)]"
-          >
-            Autos y motos, 0 km y usados. Financiamos a tu medida y tomamos tu usado
-            como parte de pago.
+        <motion.div
+          initial="oculto"
+          animate="visible"
+          variants={escalonado(0.12, 0.25)}
+          className={`relative z-10 pb-14 md:pb-16 ${MARGENES}`}
+        >
+          <motion.p variants={subidaCorta} className="rotulo text-[var(--piso)]/50">
+            {total ? `${total} unidades en stock` : INFO_NEGOCIO.name} ·{" "}
+            {INFO_NEGOCIO.province}
           </motion.p>
 
-          <motion.div variants={subida} className="mt-9 flex flex-col sm:flex-row gap-3">
-            <a
-              href="#vehiculos"
-              className="group inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full bg-[var(--tinta)] text-[var(--nieve)] font-medium hover:bg-[var(--rojo)] transition-colors duration-300"
-            >
-              Ver vehículos
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </a>
-            <a
-              href={obtenerUrlWhatsApp(CONSULTA)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full border border-[var(--linea)] bg-[var(--nieve)] text-[var(--tinta)] font-medium hover:border-[var(--tinta)] hover:shadow-[var(--sombra-baja)] transition-all duration-300"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Escribir por WhatsApp
-            </a>
-          </motion.div>
-        </div>
+          <motion.h1
+            variants={subida}
+            className="titular mt-6 max-w-6xl text-[clamp(2.5rem,7.5vw,6.5rem)] text-balance text-[var(--piso)]"
+          >
+            Todo lo que ves
+            <br className="hidden md:block" /> está en el showroom
+          </motion.h1>
 
-        {/* Foto (móvil): la misma escena, en tarjeta */}
-        <motion.div
-          variants={subida}
-          className="lg:hidden mt-12 relative aspect-[16/11] rounded-2xl overflow-hidden shadow-[var(--sombra-alta)] pasada-luz pasada-luz-carga"
-        >
-          <Image
-            src="/images/hero.png"
-            alt="Clientes recibiendo las llaves de su auto en el showroom de SEA Automotores"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[65%_center]"
-          />
-        </motion.div>
-      </div>
-
-      {/* Franja de confianza: los cuatro datos entran en cascada propia */}
-      <motion.div
-        variants={escalonado(0.08)}
-        className="relative border-t border-[var(--linea)] bg-[var(--nieve)]"
-      >
-        <dl className="max-w-[1320px] mx-auto px-6 lg:px-10 grid grid-cols-2 lg:grid-cols-4">
-          {GARANTIAS.map(([rotulo, valor], i) => (
+          <div className="mt-12 flex flex-col justify-between gap-10 md:mt-16 lg:flex-row lg:items-end">
             <motion.div
-              key={rotulo}
-              variants={subidaCorta}
-              className={`py-6 lg:py-7 ${i > 0 ? "lg:pl-8 lg:border-l lg:border-[var(--linea)]" : ""}`}
+              variants={subida}
+              className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-10"
             >
-              <dt className="text-xs uppercase tracking-[0.14em] text-[var(--humo)]">{rotulo}</dt>
-              <dd className="mt-1.5 text-sm lg:text-base font-medium text-[var(--tinta)]">{valor}</dd>
+              <a
+                href="#vehiculos"
+                className="group inline-flex w-fit items-center gap-3 border-b border-[var(--piso)]/30 pb-1.5 text-sm tracking-wide text-[var(--piso)] transition-colors duration-500 hover:border-[var(--piso)]"
+              >
+                Ver vehículos
+                <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
+              <a
+                href={obtenerUrlWhatsApp(CONSULTA)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex w-fit items-center gap-3 border-b border-transparent pb-1.5 text-sm tracking-wide text-[var(--piso)]/60 transition-colors duration-500 hover:border-[var(--piso)]/40 hover:text-[var(--piso)]"
+              >
+                Escribir por WhatsApp
+                <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
             </motion.div>
-          ))}
-        </dl>
-      </motion.div>
-    </motion.section>
+
+            {/* Ficha de la unidad en pantalla + índices. Es lo que hace que la
+                foto sea catálogo y no decoración. */}
+            {activa && (
+              <motion.div variants={subidaCorta} className="hidden shrink-0 md:block">
+                <Link href={`/catalogo/${activa.ref}`} className="group block text-right">
+                  <p className="rotulo text-[var(--piso)]/40">
+                    {activa.year}
+                    {activa.condicion === "0km"
+                      ? " · 0 km"
+                      : activa.kms > 0
+                        ? ` · ${activa.kms.toLocaleString("es-AR")} km`
+                        : ""}
+                  </p>
+                  <p className="titular mt-3 text-2xl text-[var(--piso)]">
+                    {activa.brand} {activa.model}
+                  </p>
+                  <p className="cifra mt-2 text-sm text-[var(--piso)]/60 transition-colors duration-500 group-hover:text-[var(--piso)]">
+                    {activa.precio > 0 ? formatearPrecio(activa.precio) : "Precio a consultar"}
+                  </p>
+                </Link>
+
+                {portadas.length > 1 && (
+                  <div className="mt-6 flex justify-end gap-4">
+                    {portadas.map((v, i) => (
+                      <button
+                        key={v.ref ?? v.id}
+                        type="button"
+                        onClick={() => setIndice(i)}
+                        aria-label={`Ver ${v.brand} ${v.model}`}
+                        aria-current={i === indice}
+                        className="group/i w-10 pt-2"
+                      >
+                        <span className="relative block h-px w-full bg-[var(--piso)]/25">
+                          {i === indice && (
+                            // La barra corre los 6 s de la pausa. Al apuntar el
+                            // hero la rotación se detiene pero la barra ya no
+                            // se reinicia: se queda llena hasta que soltás.
+                            <motion.span
+                              key={indice}
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1 }}
+                              transition={{
+                                duration: menosMovimiento ? 0 : PAUSA / 1000,
+                                ease: "linear",
+                              }}
+                              className="absolute inset-0 origin-left bg-[var(--piso)]"
+                            />
+                          )}
+                        </span>
+                        <span
+                          className={`rotulo cifra mt-2 block transition-colors duration-300 ${
+                            i === indice
+                              ? "text-[var(--piso)]"
+                              : "text-[var(--piso)]/35 group-hover/i:text-[var(--piso)]/70"
+                          }`}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Franja de confianza: cuatro datos duros separados por un filo. Es el
+          primer bloque en blanco y marca el cambio de registro tras la foto. */}
+      <motion.dl
+        initial="oculto"
+        animate="visible"
+        variants={escalonado(0.07, 0.6)}
+        className={`grid grid-cols-2 border-b border-[var(--linea)] lg:grid-cols-4 ${MARGENES}`}
+      >
+        {GARANTIAS.map(([rotulo, valor], i) => (
+          <motion.div key={rotulo} variants={subidaCorta} className={celdaGarantia(i)}>
+            <dt className="rotulo text-[var(--humo)]">{rotulo}</dt>
+            <dd className="mt-3 text-sm text-[var(--tinta)] md:text-base">{valor}</dd>
+          </motion.div>
+        ))}
+      </motion.dl>
+    </>
   );
 }
 

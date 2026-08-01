@@ -2,37 +2,32 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Car, Bike, Package } from "lucide-react";
+import { Boton } from "@/components/interfaz/boton";
 import {
-  ArrowLeft, ArrowUpRight, BadgePercent, Gift,
-  Calendar, Gauge, Fuel, Car, Bike, Package,
-} from "lucide-react";
-import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
+  obtenerNombreCompletoVehiculo,
+  formatearPrecio,
+  fechaCorta,
+  etiquetaDescuento,
+  etiquetaPromo,
+} from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
 import { obtenerVehiculo } from "@/lib/api";
 
 const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
-function fechaCorta(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("es-AR", { timeZone: "UTC", day: "2-digit", month: "2-digit" });
-}
-function etiquetaDescuento(d) {
-  return d.tipo === "monto" ? `-${formatearPrecio(d.valor)}` : `-${d.valor}%`;
-}
-function etiquetaPromo(p) {
-  if (p.descuento == null) return "";
-  return p.descuento_tipo === "monto" ? `-${formatearPrecio(p.descuento)}` : `-${p.descuento}%`;
-}
-
-// Rótulo mono + valor, estilo "ficha técnica".
+// Fila de ficha técnica: regla superior, icono rojo, rótulo mono y valor. Es la
+// misma pieza que usa la sección de contacto de la portada.
 function Especificacion({ icon: Icon, rotulo, children }) {
   return (
-    <div className="flex items-start gap-3 border border-foreground/10 bg-card px-4 py-3">
-      <Icon className="w-4 h-4 text-brand shrink-0 mt-1" aria-hidden="true" />
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground/70 uppercase">{rotulo}</span>
-        <span className="text-sm font-medium text-foreground tabular-nums truncate">{children}</span>
+    <div className="flex items-start gap-3 border-t border-border pt-4">
+      <Icon className="mt-0.5 w-4 h-4 text-brand shrink-0" strokeWidth={1.75} aria-hidden="true" />
+      <div className="flex flex-col gap-1.5 min-w-0">
+        <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+          {rotulo}
+        </span>
+        <span className="text-sm text-foreground truncate">{children}</span>
       </div>
     </div>
   );
@@ -59,29 +54,37 @@ function DetalleVehiculo({ refVehiculo }) {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
         <Link
           href="/catalogo"
-          className="inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase text-muted-foreground hover:text-brand transition-colors mb-8"
+          className="inline-flex items-center gap-3 font-mono text-sm text-muted-foreground hover:text-foreground transition-colors mb-10"
         >
           <ArrowLeft className="w-4 h-4" /> Volver al catálogo
         </Link>
 
+        {/* Mientras carga se reservan los dos huecos del layout, como en la
+            grilla de la portada: la página no salta cuando llegan los datos. */}
         {cargando && (
-          <div className="py-32 text-center">
-            <p className="font-mono text-sm tracking-wider uppercase text-muted-foreground animate-pulse">Cargando vehículo…</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
+            <div className="aspect-4/3 animate-pulse bg-secondary" />
+            <div className="h-96 animate-pulse bg-secondary" />
           </div>
         )}
 
         {!cargando && (error || !vehiculo) && (
           <div className="py-24 text-center">
-            <p className="text-2xl font-semibold text-foreground mb-2">Vehículo no encontrado</p>
+            <p className="text-3xl lg:text-4xl font-display tracking-tight mb-3">
+              Vehículo no encontrado
+            </p>
             <p className="text-sm text-muted-foreground mb-8">
               Puede que ya se haya vendido o que el enlace no sea válido.
             </p>
-            <Link
-              href="/catalogo"
-              className="inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase bg-brand text-white px-5 py-3 hover:opacity-90 transition-opacity"
+            <Boton
+              size="lg"
+              className="rounded-full px-8 h-12 text-sm bg-brand text-white hover:bg-white hover:text-brand border-0 hover:border hover:border-brand transition-all duration-300"
+              asChild
             >
-              Ver catálogo <ArrowUpRight className="w-4 h-4" />
-            </Link>
+              <Link href="/catalogo">
+                Ver catálogo <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </Boton>
           </div>
         )}
 
@@ -111,7 +114,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
       {/* ── Galería ── */}
       <div className="flex flex-col gap-3">
-        <div className="relative aspect-4/3 overflow-hidden bg-secondary border border-foreground/12">
+        <div className="relative aspect-4/3 overflow-hidden bg-secondary border border-foreground/10">
           <Image
             src={fotos[fotoActiva] ?? "/placeholder.svg"}
             alt={obtenerNombreCompletoVehiculo(vehiculo)}
@@ -120,11 +123,15 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
             className="object-cover"
             priority
           />
-          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          {/* Mismas pastillas que la tarjeta del catálogo. */}
+          <div className="absolute top-3 left-3 flex items-center gap-2">
             {vehiculo.condicion === "0km" && (
-              <span className="font-mono text-[10px] tracking-[0.18em] uppercase bg-brand text-white px-2 py-1">0 km</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-brand text-white tracking-wide">
+                0 km
+              </span>
             )}
-            <span className="font-mono text-[10px] tracking-[0.18em] uppercase bg-background/85 backdrop-blur-sm text-foreground px-2 py-1">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-background/80 backdrop-blur-sm text-foreground">
+              {vehiculo.tipo === "moto" ? <Bike className="w-3 h-3" /> : <Car className="w-3 h-3" />}
               {vehiculo.tipo === "moto" ? "Moto" : "Auto"}
             </span>
           </div>
@@ -138,7 +145,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
                 type="button"
                 onClick={() => setFotoActiva(i)}
                 className={`relative aspect-4/3 overflow-hidden bg-secondary border transition-colors ${
-                  i === fotoActiva ? "border-brand" : "border-foreground/12 hover:border-foreground/40"
+                  i === fotoActiva ? "border-brand" : "border-foreground/10 hover:border-foreground/30"
                 }`}
                 aria-label={`Ver foto ${i + 1}`}
               >
@@ -151,12 +158,12 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
 
       {/* ── Info ── */}
       <div className="flex flex-col">
-        <h1 className="text-3xl lg:text-4xl font-semibold uppercase tracking-tight leading-tight text-foreground">
+        <h1 className="text-4xl lg:text-5xl font-display tracking-tight text-foreground">
           {vehiculo.brand} <span className="text-muted-foreground">{vehiculo.model}</span>
         </h1>
 
         {/* Ficha técnica */}
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5">
           <Especificacion icon={Calendar} rotulo="Año">{vehiculo.year}</Especificacion>
           <Especificacion icon={Gauge} rotulo="Kilómetros">
             {sinKm ? "0 km" : `${vehiculo.kms.toLocaleString("es-AR")} km`}
@@ -173,73 +180,83 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
           </Especificacion>
         </div>
 
-        {/* Beneficios vigentes */}
+        {/* Beneficios vigentes: filete rojo al margen, una línea por beneficio.
+            Es el mismo gesto que en la tarjeta del catálogo. */}
         {(descuento || promos.length > 0) && (
-          <div className="mt-5 flex flex-col gap-2">
+          <ul className="mt-8 flex flex-col gap-3 border-l border-brand pl-4">
             {descuento && (
-              <div className="flex items-start gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">
-                <BadgePercent className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {descuento.nombre} <span className="text-brand font-semibold">{etiquetaDescuento(descuento)}</span>
+              <li>
+                <p className="text-sm text-foreground">
+                  {descuento.nombre}{" "}
+                  <span className="font-medium text-brand">{etiquetaDescuento(descuento)}</span>
+                </p>
+                {descuento.fecha_fin && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    válido hasta {fechaCorta(descuento.fecha_fin)}
                   </p>
-                  {descuento.fecha_fin && (
-                    <p className="font-mono text-[10px] tracking-wider uppercase text-muted-foreground">Válido hasta {fechaCorta(descuento.fecha_fin)}</p>
-                  )}
-                </div>
-              </div>
+                )}
+              </li>
             )}
             {promos.map((p) => (
-              <div key={p.id} className="flex items-start gap-2 rounded-md border border-foreground/12 bg-secondary/40 px-3 py-2">
-                <Gift className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {p.nombre}
-                    {etiquetaPromo(p) && <span className="text-brand font-semibold"> {etiquetaPromo(p)}</span>}
+              <li key={p.id}>
+                <p className="text-sm text-foreground">
+                  {p.nombre}
+                  {etiquetaPromo(p) && <span className="font-medium text-brand"> {etiquetaPromo(p)}</span>}
+                </p>
+                {p.descripcion && <p className="mt-0.5 text-xs text-muted-foreground">{p.descripcion}</p>}
+                {p.fecha_fin && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    válido hasta {fechaCorta(p.fecha_fin)}
                   </p>
-                  {p.descripcion && <p className="text-xs text-muted-foreground">{p.descripcion}</p>}
-                  {p.fecha_fin && (
-                    <p className="font-mono text-[10px] tracking-wider uppercase text-muted-foreground">Válido hasta {fechaCorta(p.fecha_fin)}</p>
-                  )}
-                </div>
-              </div>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {/* Descripción */}
         {vehiculo.descripcion && (
-          <div className="mt-6 border-t border-foreground/10 pt-5">
-            <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-muted-foreground/70 block mb-2">Descripción</span>
+          <div className="mt-8 border-t border-border pt-5">
+            <span className="block mb-2 font-mono text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+              Descripción
+            </span>
             <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{vehiculo.descripcion}</p>
           </div>
         )}
 
         {/* Precio + CTA */}
-        <div className="mt-auto pt-8">
-          <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-muted-foreground/70 block mb-1">Precio</span>
+        <div className="mt-auto pt-10">
+          <span className="block mb-2 font-mono text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+            Precio
+          </span>
           {vehiculo.precio > 0 ? (
             descuento ? (
-              <div className="mb-5">
-                <span className="block font-mono text-sm text-muted-foreground line-through tabular-nums">{formatearPrecio(vehiculo.precio)}</span>
-                <p className="text-3xl lg:text-4xl font-semibold tabular-nums text-brand">{formatearPrecio(vehiculo.precio_final)}</p>
-                <p className="font-mono text-[10px] tracking-wider uppercase text-brand mt-1">Ahorrás {formatearPrecio(vehiculo.ahorro)}</p>
+              <div className="mb-6">
+                <span className="block text-sm text-muted-foreground line-through">
+                  {formatearPrecio(vehiculo.precio)}
+                </span>
+                <p className="text-4xl lg:text-5xl font-display tracking-tight text-brand">
+                  {formatearPrecio(vehiculo.precio_final)}
+                </p>
+                <p className="mt-1 text-xs text-brand">Ahorrás {formatearPrecio(vehiculo.ahorro)}</p>
               </div>
             ) : (
-              <p className="text-3xl lg:text-4xl font-semibold tabular-nums text-foreground mb-5">{formatearPrecio(vehiculo.precio)}</p>
+              <p className="mb-6 text-4xl lg:text-5xl font-display tracking-tight text-foreground">
+                {formatearPrecio(vehiculo.precio)}
+              </p>
             )
           ) : (
-            <p className="text-xl font-medium text-muted-foreground mb-5">A consultar</p>
+            <p className="mb-6 text-2xl font-display text-muted-foreground">A consultar</p>
           )}
 
-          <button
-            type="button"
+          <Boton
+            size="lg"
             onClick={abrirBot}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-mono text-sm tracking-[0.14em] uppercase bg-brand text-white px-8 py-4 hover:opacity-90 transition-opacity"
+            className="w-full sm:w-auto rounded-full px-10 h-14 text-sm sm:text-base bg-brand text-white hover:bg-white hover:text-brand border-0 hover:border hover:border-brand transition-all duration-300 group/btn"
           >
             Consultar por WhatsApp
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
+            <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" />
+          </Boton>
         </div>
       </div>
     </div>

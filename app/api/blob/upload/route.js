@@ -42,19 +42,45 @@ export async function POST(request) {
     if (!file || typeof file.arrayBuffer !== "function") {
       return NextResponse.json({ error: "No se recibió ningún archivo." }, { status: 400 });
     }
-    if (!file.type?.startsWith("image/")) {
+    // El MIME que declara el cliente NO alcanza como validación: lo controla él
+    // y encima Windows no registra tipo para .webp, .avif ni .heic, que son
+    // imágenes válidas. Esos llegan como octet-stream (el multipart no admite
+    // tipo vacío), así que un genérico no se puede rechazar de entrada.
+    //
+    // Acá solo se descarta lo que se declara explícitamente como otra cosa
+    // (application/pdf, video/mp4…). Del contenido real se ocupa sharp más
+    // abajo, que es la comprobación que de verdad vale: si no es una imagen, no
+    // la puede decodificar.
+    const tipo = file.type || "";
+    const tipoGenerico = tipo === "" || tipo === "application/octet-stream";
+    if (!tipoGenerico && !tipo.startsWith("image/")) {
       return NextResponse.json({ error: "El archivo no es una imagen." }, { status: 400 });
     }
     if (file.size > MAX_ENTRADA) {
       return NextResponse.json({ error: "La imagen supera los 10 MB." }, { status: 400 });
     }
 
-    const entrada = Buffer.from(await file.arrayBuffer());
-    const optimizada = await sharp(entrada)
-      .rotate()
-      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 80, progressive: true, mozjpeg: true })
-      .toBuffer();
+    // `Buffer.from(arrayBuffer)` NO copia: comparte la memoria del ArrayBuffer
+    // que devuelve undici, y sharp rechaza esa entrada con "ArrayBuffer:
+    // SharedArrayBuffer is not allowed". Pasando por un Uint8Array, Buffer.from
+    // sí copia los bytes y sharp recibe memoria propia.
+    const entrada = Buffer.from(new Uint8Array(await file.arrayBuffer()));
+
+    let optimizada;
+    try {
+      optimizada = await sharp(entrada)
+        .rotate()
+        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 80, progressive: true, mozjpeg: true })
+        .toBuffer();
+    } catch {
+      // sharp no pudo leerla: o no es una imagen, o el formato no es uno de los
+      // que soporta (por ejemplo HEIC, según cómo esté compilado libvips).
+      return NextResponse.json(
+        { error: "No pudimos leer esa imagen. Probá con un archivo JPG, PNG o WebP." },
+        { status: 400 }
+      );
+    }
 
     const blob = await put("vehiculos/imagen.jpg", optimizada, {
       access: "public",

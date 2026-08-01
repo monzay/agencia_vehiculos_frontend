@@ -1,5 +1,6 @@
-import { Navegacion } from "@/components/portada/navegacion";
-import { SeccionPie } from "@/components/portada/seccion-pie";
+import { Navegacion } from "@/components/inicio/navegacion";
+import { SeccionPie } from "@/components/inicio/seccion-pie";
+import { BotonWhatsApp } from "@/components/inicio/boton-whatsapp";
 import { ContenidoCatalogo } from "@/components/catalogo/contenido-catalogo";
 
 const metadata = {
@@ -10,10 +11,13 @@ const metadata = {
 
 function PaginaCatalogo() {
   return (
-    <main className="relative min-h-screen overflow-x-hidden noise-overlay">
+    // `inicio` es el esquema de la portada: el catálogo comparte dirección con
+    // `/` para que pasar de una a otra no se sienta como cambiar de sitio.
+    <main className="inicio relative min-h-screen overflow-x-clip noise-overlay">
       <Navegacion />
       <ContenidoCatalogo />
       <SeccionPie />
+      <BotonWhatsApp />
     </main>
   );
 }

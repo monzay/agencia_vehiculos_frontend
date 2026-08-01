@@ -274,14 +274,6 @@
     background-size: 100% 100%, 8px 8px;
   }
 
-  /* Grilla técnica sutil de fondo (aire de plano/blueprint automotor). */
-  .grilla-tecnica {
-    background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px);
-    background-size: 76px 76px;
-  }
-
   /* Reveal al entrar en viewport (se combina con el hook usarEnVista). */
   .reveal {
     opacity: 0;
@@ -295,70 +287,217 @@
   }
 }
 
-/* ── PORTADA — dirección "showroom SEA" (scopeada a .home, no afecta catálogo ni panel) ──
-   La paleta sale del local real: el piso claro y brillante del showroom, la marquesina
-   grafito del cartel y el rojo del logo como único acento. */
+/* ── PORTADA — dirección "corporativa mínima" ──────────────────────────────
+   Papel blanco, tinta casi negra y un filo de un pelo como única división.
+   No hay sombras, ni esquinas redondeadas, ni degradados: la jerarquía la
+   hacen el cuerpo tipográfico, el aire y el contraste. El peso visual lo
+   aportan las fotos del stock real y dos bandas invertidas.
+
+   El rojo de la marca queda reservado a los estados COMERCIALES —precio con
+   descuento, promoción vigente—; nunca decora. Una paleta acromática con un
+   solo acento con significado es lo que separa el registro corporativo del
+   cartel de oferta.
+
+   Scopeado a .home: /catalogo (.nocturno, más abajo) y el panel no se tocan. */
 .home {
-  --piso: oklch(0.975 0.002 250);      /* canvas: piso de showroom */
-  --nieve: oklch(1 0 0);               /* tarjetas y hero */
-  --tinta: oklch(0.18 0.012 260);      /* texto principal */
-  --humo: oklch(0.55 0.012 260);       /* texto secundario */
-  --linea: oklch(0.90 0.004 260);      /* bordes de un pelo */
-  --grafito: oklch(0.21 0.012 260);    /* marquesina: cierre y pie */
+  --piso: oklch(1 0 0);            /* canvas */
+  --nieve: oklch(0.968 0 0);       /* bandas alternas */
+  --tinta: oklch(0.16 0 0);        /* texto principal */
+  --humo: oklch(0.45 0 0);         /* secundario — 5.2:1 sobre --piso */
+  --linea: oklch(0.87 0 0);        /* filo */
+  --grafito: oklch(0.16 0 0);      /* secciones invertidas */
   --rojo: var(--brand);
   --curva: cubic-bezier(0.22, 1, 0.36, 1);
-  --sombra-baja: 0 1px 2px oklch(0.18 0.012 260 / 0.04), 0 10px 30px -18px oklch(0.18 0.012 260 / 0.35);
-  --sombra-alta: 0 2px 6px oklch(0.18 0.012 260 / 0.06), 0 30px 60px -28px oklch(0.18 0.012 260 / 0.45);
 
   background-color: var(--piso);
   color: var(--tinta);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* Los componentes de catálogo embebidos en la portada están escritos con los
+     tokens semánticos de shadcn: se remapean acá para que hereden el esquema
+     claro sin tocar una sola de sus clases. Fuera de este scope siguen igual. */
+  --background: var(--piso);
+  --foreground: var(--tinta);
+  --card: var(--piso);
+  --card-foreground: var(--tinta);
+  --popover: var(--piso);
+  --popover-foreground: var(--tinta);
+  --secondary: var(--nieve);
+  --secondary-foreground: var(--tinta);
+  --muted: var(--nieve);
+  --muted-foreground: var(--humo);
+  --accent: var(--nieve);
+  --accent-foreground: var(--tinta);
+  --border: var(--linea);
+  --input: var(--linea);
+  --ring: var(--tinta);
+  --primary: var(--tinta);
+  --primary-foreground: var(--piso);
+
+  /* Esquina viva en toda la portada: el radio es lo primero que delata una
+     plantilla. Los componentes de catálogo que leen --radius lo heredan. */
+  --radius: 0px;
+}
+
+/* ── PORTADA `/` — dirección "showroom de día" ─────────────────────────────
+   Los valores salen de las fotos del showroom (public/images/showroom*.png):
+   hormigón pulido claro, negro azulado de la plataforma de exhibición, la luz
+   ámbar del ventanal al fondo y el hilo rojo trazado en el piso.
+
+   Ese hilo es la firma: el rojo aparece SIEMPRE como línea de un pelo —debajo
+   de una fila al apuntarla, al margen de una cita, en el filo de un marco—
+   nunca como relleno de superficies grandes. Es lo que ata la web a las fotos.
+
+   Scopeado a .inicio, que hoy visten la portada Y el catálogo (listado y ficha);
+   el panel y /financiacion no se tocan. Los componentes de catálogo están
+   escritos con los tokens de shadcn, que se remapean abajo para que hereden este
+   esquema sin cambiar una sola clase. */
+.inicio {
+  --piso: oklch(0.958 0.0015 100);    /* hormigón pulido: canvas */
+  --hormigon: oklch(0.918 0.002 100); /* celdas y bandas */
+  --tinta: oklch(0.175 0.005 250);    /* negro de la plataforma */
+  --humo: oklch(0.475 0.006 250);     /* secundario — 6.2:1 sobre --piso */
+  --linea: oklch(0.858 0.003 100);    /* filo */
+  --ambar: oklch(0.80 0.075 72);      /* luz del ventanal — acento mínimo */
+  --rojo: var(--brand);               /* el hilo del piso */
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background-color: var(--piso);
+  color: var(--tinta);
+
+  --background: var(--piso);
+  --foreground: var(--tinta);
+  /* La tarjeta va en blanco puro: es lo que la despega del piso de hormigón
+     sin necesidad de sombra. */
+  --card: oklch(1 0 0);
+  --card-foreground: var(--tinta);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--tinta);
+  --secondary: var(--hormigon);
+  --secondary-foreground: var(--tinta);
+  --muted: var(--hormigon);
+  --muted-foreground: var(--humo);
+  --accent: var(--hormigon);
+  --accent-foreground: var(--tinta);
+  --border: var(--linea);
+  --input: var(--linea);
+  --ring: var(--rojo);
+}
+
+/* ── CATÁLOGO — dirección "showroom nocturno" ──────────────────────────────
+   El local de noche: las luces apagadas salvo una que barre la chapa. Canvas
+   grafito profundo y el rojo del logo como único acento.
+
+   Los NOMBRES de los tokens son los mismos que en la portada (--piso, --nieve,
+   --tinta…) y solo cambian sus valores: el rol de cada uno —canvas, superficie,
+   texto principal, texto secundario— se mantiene, así los componentes que se
+   comparten entre portada y catálogo no necesitan saber en cuál están. */
+.nocturno {
+  --piso: oklch(0.145 0.008 265);      /* canvas: el showroom a oscuras */
+  --nieve: oklch(0.195 0.009 265);     /* superficies: chapa iluminada */
+  --tinta: oklch(0.97 0.003 265);      /* texto principal */
+  --humo: oklch(0.66 0.012 265);       /* texto secundario */
+  --linea: oklch(0.30 0.010 265);      /* filo: bordes de un pelo */
+  --grafito: oklch(0.115 0.008 265);   /* bandas más profundas: pie y cierre */
+  --rojo: var(--brand);
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+  /* En oscuro la sombra no separa: lo que separa es el filo. Se mantienen
+     suaves y se apoyan en un borde superior de luz. */
+  --sombra-baja: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 18px 40px -24px oklch(0 0 0 / 0.9);
+  --sombra-alta: 0 1px 0 oklch(1 0 0 / 0.06) inset, 0 40px 80px -32px oklch(0 0 0 / 1);
+
+  background-color: var(--piso);
+  color: var(--tinta);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* El catálogo y las fichas están escritos con los tokens semánticos de shadcn
+     (--foreground, --card, --muted-foreground…), no con los de la portada. Se
+     remapean acá dentro para que hereden el esquema nocturno sin tocar una sola
+     clase de esos componentes. Fuera de este scope —el panel— siguen intactos. */
+  --background: var(--piso);
+  --foreground: var(--tinta);
+  --card: var(--nieve);
+  --card-foreground: var(--tinta);
+  --popover: var(--nieve);
+  --popover-foreground: var(--tinta);
+  --secondary: var(--nieve);
+  --secondary-foreground: var(--tinta);
+  --muted: var(--nieve);
+  --muted-foreground: var(--humo);
+  --accent: var(--nieve);
+  --accent-foreground: var(--tinta);
+  --border: var(--linea);
+  --input: var(--linea);
+  --ring: var(--rojo);
+  --primary: var(--rojo);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* Titulares del catálogo: misma voz que la portada. */
+  --font-display: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+}
+
+/* La navegación es `fixed`: sin esto, al saltar a un ancla el título queda
+   debajo de la barra. Se aplica a las secciones del sitio público únicamente. */
+.inicio section[id],
+.home section[id],
+.nocturno section[id] {
+  scroll-margin-top: 6.5rem;
 }
 
 @layer utilities {
-  /* Titulares: grotesca industrial, pariente del logotipo SEA. */
+  /* Titulares: Sora. Geométrica y ancha, se sostiene sola en cuerpos grandes,
+     que es lo que necesita una portada sin fotografía. Sin versalitas: la caja
+     alta del esquema anterior leía como cartel de ruta, no como marca. */
   .tipo-titulo {
-    font-family: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+    font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     line-height: 0.94;
+  }
+
+  /* Rótulo de sección: mono, versalitas espaciadas. Es el contrapunto chico y
+     técnico del titular grande — la jerarquía se lee antes de leer las palabras. */
+  .tipo-rotulo {
+    font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
   }
 
-  /* Firma de la portada: la luz del showroom cruzando la chapa.
-     Se dispara una vez al cargar el hero (-carga) y vuelve, apenas, en hover (-hover).
-     No fija `position`: quien la usa ya es relative o absolute, y declararla acá
-     pisaría a las utilidades de Tailwind (misma capa, misma especificidad). */
-  .pasada-luz {
-    overflow: hidden;
-    isolation: isolate;
+  /* Datos duros —precio, km, año, cuotas— en mono tabular: alinean en columna
+     y se distinguen del texto corrido de un vistazo. */
+  .tipo-dato {
+    font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
-  .pasada-luz::after {
-    content: '';
-    position: absolute;
-    inset: -20% -40%;
-    z-index: 2;
-    pointer-events: none;
-    background: linear-gradient(
-      100deg,
-      transparent 38%,
-      oklch(1 0 0 / 0.20) 47%,
-      oklch(1 0 0 / 0.45) 50%,
-      oklch(1 0 0 / 0.20) 53%,
-      transparent 62%
-    );
-    transform: translateX(-115%);
+
+  /* ── Voz tipográfica de la PORTADA ──────────────────────────────────────
+     Tres clases y una sola familia (Geist). En esta dirección el contraste no
+     lo da mezclar tipografías sino el salto de escala y de peso: 11 px muy
+     espaciados contra titulares de 44 px en peso 200. */
+
+  /* Rótulo de sección: versalitas chicas y muy abiertas. Ordena la lectura
+     antes de que se lean las palabras. */
+  .rotulo {
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
   }
-  .pasada-luz-carga::after {
-    animation: pasada 2.6s var(--curva) 0.45s 1 forwards;
+
+  /* Titular: peso 200 con tracking negativo. A cuerpo grande el trazo fino es
+     lo que separa una portada corporativa de un cartel de oferta. */
+  .titular {
+    font-weight: 200;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
   }
-  .pasada-luz-hover::after {
-    transition: transform 1.1s var(--curva);
-  }
-  .group:hover .pasada-luz-hover::after {
-    transform: translateX(115%);
-  }
-  @keyframes pasada {
-    to { transform: translateX(115%); }
+
+  /* Cifras —precio, año, kms— tabulares: alinean en columna entre tarjetas. */
+  .cifra {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 }
 

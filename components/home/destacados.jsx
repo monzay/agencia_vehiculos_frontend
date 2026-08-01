@@ -1,85 +1,70 @@
 "use client";
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
-import { obtenerVehiculos } from "@/lib/api";
+import { ArrowUpRight } from "lucide-react";
 import { TarjetaVehiculoHome } from "./tarjeta-vehiculo";
-import { VISTA, escalonado, subida, LineaTitulo } from "./movimiento";
+import { VISTA, escalonado } from "./movimiento";
+import { MARGENES, AIRE, EncabezadoSeccion } from "./estructura";
+import { useStock } from "./stock";
 
 const CANTIDAD = 6;
 
 // La API devuelve el stock del más nuevo al más viejo: los seis primeros son,
-// literalmente, los últimos que entraron al playón.
+// literalmente, los últimos que entraron al showroom.
+//
+// La grilla se arma con `gap-px` sobre el color de línea: el fondo asoma entre
+// las celdas y dibuja los filos sin que ninguna tarjeta lleve borde propio. Es
+// el mismo recurso que ordena "Cómo comprar", y lo que hace que la página se
+// lea como una sola retícula.
 function Destacados() {
-  const [vehiculos, setVehiculos] = useState(null);
-
-  useEffect(() => {
-    let activo = true;
-    obtenerVehiculos()
-      .then((datos) => activo && setVehiculos((datos || []).slice(0, CANTIDAD)))
-      .catch(() => activo && setVehiculos([]));
-    return () => {
-      activo = false;
-    };
-  }, []);
+  const stock = useStock();
+  const vehiculos = stock === null ? null : stock.slice(0, CANTIDAD);
 
   return (
-    <section id="vehiculos" className="py-20 lg:py-28">
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-10">
-        <motion.header
+    <section id="vehiculos" className={`${AIRE} ${MARGENES}`}>
+      <EncabezadoSeccion
+        indice="01"
+        rotulo="Últimos ingresos"
+        titulo="Vehículos"
+        contador={
+          vehiculos?.length
+            ? `${String(vehiculos.length).padStart(2, "0")} de ${stock.length} unidades`
+            : null
+        }
+        className="mb-16 md:mb-20"
+      />
+
+      {vehiculos === null ? (
+        <div className="grid grid-cols-1 gap-px bg-[var(--linea)] md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: CANTIDAD }).map((_, i) => (
+            <div key={i} className="h-[26rem] animate-pulse bg-[var(--nieve)]" />
+          ))}
+        </div>
+      ) : vehiculos.length === 0 ? (
+        <p className="max-w-md py-16 text-sm leading-[1.75] text-[var(--humo)]">
+          El catálogo no está disponible en este momento. Escribinos por WhatsApp y te
+          contamos qué tenemos.
+        </p>
+      ) : (
+        <motion.div
           initial="oculto"
           whileInView="visible"
           viewport={VISTA}
-          variants={escalonado(0.12)}
-          className="flex flex-wrap items-end justify-between gap-6 mb-12 lg:mb-16"
+          variants={escalonado(0.08)}
+          className="grid grid-cols-1 gap-px bg-[var(--linea)] md:grid-cols-2 lg:grid-cols-3"
         >
-          <div>
-            <motion.span variants={subida} className="block text-sm text-[var(--humo)]">
-              Últimos ingresos
-            </motion.span>
-            <h2 className="tipo-titulo mt-3 text-[clamp(2rem,4.5vw,3.25rem)] text-[var(--tinta)]">
-              <LineaTitulo>Lo que acaba</LineaTitulo>
-              <LineaTitulo>de entrar</LineaTitulo>
-            </h2>
-          </div>
-          <motion.a
-            variants={subida}
-            href="/catalogo"
-            className="group inline-flex items-center gap-2 h-12 px-6 rounded-full border border-[var(--linea)] bg-[var(--nieve)] text-sm font-medium text-[var(--tinta)] hover:border-[var(--tinta)] hover:shadow-[var(--sombra-baja)] transition-all duration-300"
-          >
-            Ver todo el catálogo
-            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </motion.a>
-        </motion.header>
+          {vehiculos.map((v, i) => (
+            <TarjetaVehiculoHome key={v.ref ?? v.id} vehiculo={v} indice={i} />
+          ))}
+        </motion.div>
+      )}
 
-        {vehiculos === null ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: CANTIDAD }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[26rem] rounded-2xl border border-[var(--linea)] bg-[var(--nieve)] animate-pulse"
-              />
-            ))}
-          </div>
-        ) : vehiculos.length === 0 ? (
-          <p className="py-16 text-center text-[var(--humo)]">
-            El catálogo no está disponible en este momento. Escribinos por WhatsApp y te
-            contamos qué tenemos.
-          </p>
-        ) : (
-          <motion.div
-            initial="oculto"
-            whileInView="visible"
-            viewport={VISTA}
-            variants={escalonado(0.08)}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {vehiculos.map((v) => (
-              <TarjetaVehiculoHome key={v.ref ?? v.id} vehiculo={v} />
-            ))}
-          </motion.div>
-        )}
-      </div>
+      <a
+        href="/catalogo"
+        className="group mt-12 inline-flex items-center gap-3 border-b border-[var(--linea)] pb-1.5 text-sm text-[var(--tinta)] transition-colors duration-500 hover:border-[var(--tinta)]"
+      >
+        Ver todo el catálogo
+        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+      </a>
     </section>
   );
 }

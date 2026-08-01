@@ -8,6 +8,10 @@ const cspEstricta = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https: http://localhost:4000",
+  // El mapa de la portada es un iframe de Google Maps. Sin frame-src explícito
+  // caería en default-src 'self' y quedaría bloqueado. Se listan solo los dos
+  // orígenes que sirven el embed, no un https: abierto.
+  "frame-src 'self' https://www.google.com https://maps.google.com",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",

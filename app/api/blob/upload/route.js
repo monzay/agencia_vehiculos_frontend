@@ -82,11 +82,29 @@ export async function POST(request) {
       );
     }
 
-    const blob = await put("vehiculos/imagen.jpg", optimizada, {
-      access: "public",
-      contentType: "image/jpeg",
-      addRandomSuffix: true,
-    });
+    // `put` sube el archivo con fetch, y undici rechaza cualquier cuerpo cuyo
+    // ArrayBuffer sea COMPARTIDO: "ArrayBuffer: SharedArrayBuffer is not
+    // allowed" (undici/lib/web/fetch/webidl.js). En el runtime de Vercel el
+    // buffer que devuelve sharp cae en ese caso —local no—, así que se copia a
+    // memoria propia antes de subirlo. El mensaje parece de sharp pero no lo es.
+    const salida = new Uint8Array(optimizada.byteLength);
+    salida.set(optimizada);
+
+    let blob;
+    try {
+      blob = await put("vehiculos/imagen.jpg", salida, {
+        access: "public",
+        contentType: "image/jpeg",
+        addRandomSuffix: true,
+      });
+    } catch (e) {
+      // Falla de almacenamiento, no del archivo que mandó el usuario: 502 y no
+      // 400, para que no se confunda con una imagen inválida.
+      return NextResponse.json(
+        { error: `No se pudo guardar la imagen: ${e.message}` },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({ url: blob.url });
   } catch (error) {

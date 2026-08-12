@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { UserPlus, Mail, Phone, Send, Loader2, Pencil, Trash2, KeyRound, ShieldCheck, ShieldOff, Lock, Link2, Check, Copy } from "lucide-react";
+import { UserPlus, Mail, Phone, Send, Loader2, Pencil, Trash2, KeyRound, ShieldCheck, ShieldOff, Lock, Link2, Check, Copy, AlertTriangle } from "lucide-react";
 import { crearAsesor, actualizarAsesor, eliminarAsesor } from "@/lib/api";
 import { Boton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
@@ -87,6 +87,7 @@ function LinkCaptacion({ slug }) {
 export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
   const [abierto, setAbierto] = useState(false);
   const [editId, setEditId] = useState(null); // null = alta, id = edicion
+  const [original, setOriginal] = useState(null); // nombre y slug antes de editar
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -106,9 +107,13 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
   }, [asesores, busqueda]);
 
   const editando = editId != null;
+  // Solo avisa si de verdad cambia el nombre y ese asesor ya tenia link publicado.
+  const cambiaElLink =
+    editando && original?.slug && form.nombre.trim() !== original.nombre;
 
   function abrirAlta() {
     setEditId(null);
+    setOriginal(null);
     setForm(FORM_VACIO);
     setError(null);
     setAbierto(true);
@@ -116,6 +121,9 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
 
   function abrirEdicion(a) {
     setEditId(a.id);
+    // Se guarda cómo estaba para poder avisar si el nombre cambia: el slug lo
+    // sigue, y eso rompe los links que el asesor ya publicó.
+    setOriginal({ nombre: a.nombre || "", slug: a.slug || "" });
     setForm({
       nombre: a.nombre || "",
       telefono: a.telefono || "",
@@ -295,6 +303,28 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
         >
           <form onSubmit={enviar} className="px-6 py-5 space-y-4 overflow-auto">
             <Campo label="Nombre *" valor={form.nombre} onCambio={(v) => cambiar("nombre", v)} placeholder="Ej: Juan Pérez" autoFocus />
+
+            {/* El slug del link de captación se regenera a partir del nombre, así
+                que renombrar rompe lo que el asesor ya publicó. Se avisa recién
+                cuando el nombre cambió de verdad, para no gritar sin motivo. */}
+            {cambiaElLink && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="text-xs leading-relaxed">
+                  <p className="font-medium text-foreground">
+                    Al cambiar el nombre también cambia el link de captación.
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    El actual es <span className="font-mono text-foreground">/a/{original.slug}</span> y va a
+                    dejar de funcionar. Todo lo que este asesor haya publicado en sus redes con ese link deja de
+                    identificarlo, y esas consultas pasan al reparto equitativo.
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    Si el asesor ya publicó su link, avisale que lo reemplace por el nuevo.
+                  </p>
+                </div>
+              </div>
+            )}
             <Campo label="Teléfono / WhatsApp" valor={form.telefono} onCambio={(v) => cambiar("telefono", v)} placeholder="3811234567" />
 
             {/* Acceso al panel: email (usuario) + contraseña */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { UserPlus, Mail, Phone, Send, Loader2, Pencil, Trash2, KeyRound, ShieldCheck, ShieldOff, Lock } from "lucide-react";
+import { UserPlus, Mail, Phone, Send, Loader2, Pencil, Trash2, KeyRound, ShieldCheck, ShieldOff, Lock, Link2, Check, Copy } from "lucide-react";
 import { crearAsesor, actualizarAsesor, eliminarAsesor } from "@/lib/api";
 import { Boton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
@@ -25,6 +25,64 @@ const COLUMNAS = [
   { label: "Acceso" },
   { label: "Acciones", alinear: "right" },
 ];
+
+// Link de captación del asesor: el que publica en sus redes para que las
+// consultas que entren por ahí queden atribuidas a él.
+//
+// Se muestra la ruta corta —legible y dictable por teléfono— pero se copia la
+// URL absoluta, que es lo que sirve pegar. El origen se resuelve recién al
+// copiar porque en el servidor no hay `window`.
+function LinkCaptacion({ slug }) {
+  const [copiado, setCopiado] = useState(false);
+  if (!slug) return null;
+
+  const copiar = async () => {
+    const url = `${window.location.origin}/a/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // La API de portapapeles falla sin permiso o fuera de contexto seguro, y
+      // si la excepción sube, el botón no muestra NADA y parece roto. Respaldo
+      // con un textarea, que funciona donde la API no.
+      const caja = document.createElement("textarea");
+      caja.value = url;
+      caja.style.position = "fixed";
+      caja.style.opacity = "0";
+      document.body.appendChild(caja);
+      caja.select();
+      document.execCommand("copy");
+      caja.remove();
+    }
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1800);
+  };
+
+  return (
+    <div className="mt-2">
+      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1">
+        Link de captación
+      </span>
+      <div className="flex items-center gap-1.5">
+        <span
+          title="Este link identifica al asesor: las consultas que entren por acá son suyas"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1 font-mono text-[11px] text-foreground"
+        >
+          <Link2 className="w-3 h-3 shrink-0 text-accent" />
+          /a/{slug}
+        </span>
+        <Boton
+          variante={copiado ? "primario" : "secundario"}
+          tamano="sm"
+          onClick={copiar}
+          title="Copiar el link completo al portapapeles"
+        >
+          {copiado ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copiado ? "¡Copiado!" : "Copiar"}
+        </Boton>
+      </div>
+    </div>
+  );
+}
 
 export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
   const [abierto, setAbierto] = useState(false);
@@ -179,6 +237,7 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
                     <Send className="w-3 h-3" /> {a.telegramId}
                   </p>
                 )}
+                <LinkCaptacion slug={a.slug} />
               </td>
               <td className={`${CELDA} text-muted-foreground`}>
                 {a.telefono ? (
@@ -212,6 +271,7 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
                   {a.telegramId && (
                     <p className="text-xs text-muted-foreground inline-flex items-center gap-1"><Send className="w-3 h-3" /> {a.telegramId}</p>
                   )}
+                  <LinkCaptacion slug={a.slug} />
                 </div>
                 {insigniaAcceso(a)}
               </div>

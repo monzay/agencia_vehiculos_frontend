@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { ArrowRight, MapPin, Clock, Phone, Mail, ArrowUpRight } from "lucide-react";
 import { Boton } from "@/components/interfaz/boton";
 import { usarEnVista } from "@/hooks/usar-en-vista";
-import { INFO_NEGOCIO, ENLACES_SOCIALES, obtenerUrlWhatsAppBot } from "@/lib/constantes";
+import { INFO_NEGOCIO, ENLACES_SOCIALES } from "@/lib/constantes";
+import { usarUrlWhatsAppBot } from "@/hooks/usar-url-whatsapp-bot";
 import { obtenerUbicacion, obtenerHorarios } from "@/lib/api";
 
 // Dirección, horarios y coordenadas salen ÚNICAMENTE de la base (los edita el
@@ -50,6 +51,7 @@ function Dato({ icono: Icono, titulo, children }) {
 
 function SeccionContacto() {
   const { ref, estaVisible } = usarEnVista();
+  const urlWhatsApp = usarUrlWhatsAppBot(MENSAJE_WHATSAPP);
   const [ubicacion, setUbicacion] = useState(null);
   const [horarios, setHorarios] = useState([]);
 
@@ -105,7 +107,7 @@ function SeccionContacto() {
               className="bg-brand hover:bg-brand-light text-white h-12 lg:h-14 px-8 rounded-full text-sm lg:text-base group"
               asChild
             >
-              <a href={obtenerUrlWhatsAppBot(MENSAJE_WHATSAPP)} target="_blank" rel="noopener noreferrer">
+              <a href={urlWhatsApp} target="_blank" rel="noopener noreferrer">
                 Escribinos por WhatsApp
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </a>

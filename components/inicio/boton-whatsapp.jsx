@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { INFO_NEGOCIO, obtenerUrlWhatsAppBot } from "@/lib/constantes";
+import { INFO_NEGOCIO } from "@/lib/constantes";
+import { usarUrlWhatsAppBot } from "@/hooks/usar-url-whatsapp-bot";
 
 // Botón flotante de WhatsApp, disponible en toda la navegación.
 //
@@ -27,6 +28,7 @@ function IconoWhatsApp(props) {
 
 function BotonWhatsApp() {
   const [visible, setVisible] = useState(false);
+  const url = usarUrlWhatsAppBot(MENSAJE);
 
   useEffect(() => {
     const alScrollear = () => setVisible(window.scrollY > APARECE_A);
@@ -42,7 +44,7 @@ function BotonWhatsApp() {
       }`}
     >
       <a
-        href={obtenerUrlWhatsAppBot(MENSAJE)}
+        href={url}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Escribinos por WhatsApp"

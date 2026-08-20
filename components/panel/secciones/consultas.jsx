@@ -243,7 +243,7 @@ export function SeccionConsultas({ busqueda, mostrarAsesor = true, nuevoDesde = 
                     </td>
                   )}
                   <td className={`${CELDA} text-muted-foreground`}>
-                    {c.telefono ? <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {c.telefono}</span> : "—"}
+                    {c.telefonoLocal ? <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {c.telefonoLocal}</span> : "—"}
                   </td>
                   <td className={`${CELDA} text-muted-foreground whitespace-nowrap`}>
                     {c.provincia
@@ -319,7 +319,7 @@ export function SeccionConsultas({ busqueda, mostrarAsesor = true, nuevoDesde = 
 
                   <div className="flex items-center justify-between gap-2 mt-2 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
-                      <Phone className="w-3 h-3" /> {c.telefono || "—"}
+                      <Phone className="w-3 h-3" /> {c.telefonoLocal || "—"}
                       {c.provincia && <><MapPin className="w-3 h-3 ml-1.5" /> {c.provincia}</>}
                     </span>
                     <span className="whitespace-nowrap">{fechaHora(c.hora)}</span>

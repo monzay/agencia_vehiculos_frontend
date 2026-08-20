@@ -28,7 +28,7 @@ const items = [
   { id: "consignaciones", label: "Consignaciones", icon: Handshake },
   { id: "vehiculos", label: "Vehículos", icon: Car },
   { id: "descuentos", label: "Descuentos/Promos", icon: BadgePercent },
-  { id: "asesores", label: "Asesores", icon: UserCog, soloAdmin: true },
+  { id: "asesores", label: "Asesores", icon: UserCog },
   { id: "entregas", label: "Entregas", icon: Images, soloAdmin: true },
   { id: "configuracion", label: "Configuración", icon: Settings, soloAdmin: true },
 ];

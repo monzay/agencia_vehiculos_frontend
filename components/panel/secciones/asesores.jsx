@@ -23,8 +23,8 @@ const COLUMNAS = [
   { label: "Teléfono" },
   { label: "Correo" },
   { label: "Acceso" },
-  { label: "Acciones", alinear: "right" },
 ];
+const COLUMNA_ACCIONES = { label: "Acciones", alinear: "right" };
 
 // Link de captación del asesor: el que publica en sus redes para que las
 // consultas que entren por ahí queden atribuidas a él.
@@ -84,7 +84,7 @@ function LinkCaptacion({ slug }) {
   );
 }
 
-export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
+export function SeccionAsesores({ asesores, busqueda, onRecargar, esAdmin = false }) {
   const [abierto, setAbierto] = useState(false);
   const [editId, setEditId] = useState(null); // null = alta, id = edicion
   const [original, setOriginal] = useState(null); // nombre y slug antes de editar
@@ -222,9 +222,11 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
         <p className="text-sm text-muted-foreground">
           {asesores.length} {asesores.length === 1 ? "asesor" : "asesores"} en total
         </p>
-        <Boton variante="primario" onClick={abrirAlta}>
-          <UserPlus className="w-4 h-4" /> Nuevo asesor
-        </Boton>
+        {esAdmin && (
+          <Boton variante="primario" onClick={abrirAlta}>
+            <UserPlus className="w-4 h-4" /> Nuevo asesor
+          </Boton>
+        )}
       </div>
 
       {error && !abierto && (
@@ -235,7 +237,7 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
 
       {/* Desktop: tabla */}
       <div className="hidden md:block">
-        <Tabla columnas={COLUMNAS} vacio={filtrados.length === 0} mensajeVacio="No hay asesores que coincidan.">
+        <Tabla columnas={esAdmin ? [...COLUMNAS, COLUMNA_ACCIONES] : COLUMNAS} vacio={filtrados.length === 0} mensajeVacio="No hay asesores que coincidan.">
           {filtrados.map((a) => (
             <tr key={a.id} className={FILA}>
               <td className={CELDA}>
@@ -258,9 +260,11 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
                 ) : "—"}
               </td>
               <td className={CELDA}>{insigniaAcceso(a)}</td>
-              <td className={CELDA}>
-                <div className="flex items-center justify-end gap-1.5">{accionesAsesor(a)}</div>
-              </td>
+              {esAdmin && (
+                <td className={CELDA}>
+                  <div className="flex items-center justify-end gap-1.5">{accionesAsesor(a)}</div>
+                </td>
+              )}
             </tr>
           ))}
         </Tabla>
@@ -287,7 +291,7 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar }) {
                 {a.telefono && <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> {a.telefono}</span>}
                 {a.email && <span className="inline-flex items-center gap-1.5 break-all"><Mail className="w-3.5 h-3.5 shrink-0" /> {a.email}</span>}
               </div>
-              <div className="flex justify-end mt-2">{accionesAsesor(a)}</div>
+              {esAdmin && <div className="flex justify-end mt-2">{accionesAsesor(a)}</div>}
             </div>
           ))
         )}

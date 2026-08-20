@@ -90,7 +90,7 @@ export function Panel({ consultaId = null }) {
     setRefrescar((n) => n + 1);
     const peticiones = [
       obtenerResumenLeads(),
-      esAdmin ? obtenerAsesores() : Promise.resolve([]),
+      obtenerAsesores(),
       obtenerVehiculosAdmin(),
       obtenerDescuentos(),
       obtenerPromociones(),
@@ -226,7 +226,7 @@ export function Panel({ consultaId = null }) {
                   esAdmin={esAdmin}
                 />
               )}
-              {seccion === "asesores" && esAdmin && <SeccionAsesores asesores={asesores} busqueda={busqueda} onRecargar={cargar} />}
+              {seccion === "asesores" && <SeccionAsesores asesores={asesores} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
               {seccion === "entregas" && esAdmin && <SeccionEntregas />}
               {seccion === "configuracion" && esAdmin && (
                 <SeccionConfiguracion

@@ -27,6 +27,12 @@ const headersComunes = [
 ];
 
 const nextConfig = {
+  // `sharp` es un binario nativo (libvips). Si el bundler lo empaqueta, en el
+  // runtime de Vercel no encuentra su .so y /api/blob/upload muere al importar,
+  // antes de entrar al handler: la respuesta es el HTML de error 500 de Next y
+  // el front revienta al hacer res.json(). Declarandolo externo, Next lo deja
+  // como require() real y arrastra los binarios al bundle de la funcion.
+  serverExternalPackages: ["sharp"],
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -51,14 +51,24 @@ export default function MetricasResumen({ metricas }) {
           <LineChart data={flucData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="periodo" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+            <YAxis yAxisId="leads" allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+            {/* Las visitas van UNA escala por encima de las consultas (mirar es
+                gratis, escribir cuesta). Sobre el eje de la izquierda aplastan
+                todas las demás líneas contra el cero, así que llevan el suyo. */}
+            <YAxis
+              yAxisId="vistas"
+              orientation="right"
+              allowDecimals={false}
+              tick={{ fontSize: 11, fill: "var(--success)" }}
+            />
             <Tooltip contentStyle={TOOLTIP} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line type="monotone" dataKey="clientes" stroke="var(--foreground)" strokeWidth={2} dot={{ r: 3 }} name="Clientes" />
-            <Line type="monotone" dataKey="consultas" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 2 }} name="Consultas (total)" />
-            <Line type="monotone" dataKey="CALIENTE" stroke={COLORES.CALIENTE} strokeWidth={2} dot={{ r: 2 }} name="Consultas calientes" />
-            <Line type="monotone" dataKey="TIBIO" stroke={COLORES.TIBIO} strokeWidth={2} dot={{ r: 2 }} name="Consultas tibias" />
-            <Line type="monotone" dataKey="FRIO" stroke={COLORES.FRIO} strokeWidth={2} dot={{ r: 2 }} name="Consultas frías" />
+            <Line yAxisId="vistas" type="monotone" dataKey="vistas" stroke="var(--success)" strokeWidth={2} dot={{ r: 3 }} name="Visitas a fichas" />
+            <Line yAxisId="leads" type="monotone" dataKey="clientes" stroke="var(--foreground)" strokeWidth={2} dot={{ r: 3 }} name="Clientes" />
+            <Line yAxisId="leads" type="monotone" dataKey="consultas" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 2 }} name="Consultas (total)" />
+            <Line yAxisId="leads" type="monotone" dataKey="CALIENTE" stroke={COLORES.CALIENTE} strokeWidth={2} dot={{ r: 2 }} name="Consultas calientes" />
+            <Line yAxisId="leads" type="monotone" dataKey="TIBIO" stroke={COLORES.TIBIO} strokeWidth={2} dot={{ r: 2 }} name="Consultas tibias" />
+            <Line yAxisId="leads" type="monotone" dataKey="FRIO" stroke={COLORES.FRIO} strokeWidth={2} dot={{ r: 2 }} name="Consultas frías" />
           </LineChart>
         </ResponsiveContainer>
       </Tarjeta>

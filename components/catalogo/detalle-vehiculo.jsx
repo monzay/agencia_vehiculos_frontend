@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Car, Bike, Package } from "lucide-react";
@@ -13,7 +13,7 @@ import {
 } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
-import { obtenerVehiculo } from "@/lib/api";
+import { obtenerVehiculo, registrarVistaVehiculo } from "@/lib/api";
 
 const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
@@ -47,6 +47,18 @@ function DetalleVehiculo({ refVehiculo }) {
       .catch((e) => { if (activo) setError(e.message); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
+  }, [refVehiculo]);
+
+  // Interés por vehículo: una visita por ficha abierta. Va en su propio efecto
+  // —no atado a que el fetch salga bien— porque la visita ya ocurrió.
+  //
+  // El ref es necesario, no defensivo: en desarrollo React monta los efectos
+  // dos veces y sin él cada ficha contaría doble.
+  const vistaEnviada = useRef(null);
+  useEffect(() => {
+    if (vistaEnviada.current === refVehiculo) return;
+    vistaEnviada.current = refVehiculo;
+    registrarVistaVehiculo(refVehiculo);
   }, [refVehiculo]);
 
   return (

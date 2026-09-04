@@ -1,10 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Car, Plus, Pencil, Trash2, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw } from "lucide-react";
-import { crearVehiculo, actualizarVehiculo, eliminarVehiculo, getToken } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { Car, Plus, Pencil, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw, CircleDollarSign, Handshake, Undo2 } from "lucide-react";
+import {
+  crearVehiculo,
+  actualizarVehiculo,
+  obtenerVehiculosAdmin,
+  marcarVehiculoVendido,
+  deshacerVentaVehiculo,
+  cerrarConsignacionVehiculo,
+  getToken,
+} from "@/lib/api";
 import { Overlay } from "../ui/overlay";
-import { ConfirmarModal } from "../ui/confirmar-modal";
+import { VenderModal } from "./vender-modal";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -20,6 +28,7 @@ const FORM_VACIO = {
   modelo: "",
   anio: "",
   precio: "",
+  costo: "",
   kms: "",
   stock: "1",
   condicion: "usado",
@@ -57,11 +66,34 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const [borrandoRef, setBorrandoRef] = useState(null);
-  const [aBorrar, setABorrar] = useState(null);
   const [detalle, setDetalle] = useState(null); // vehículo abierto en el modal de detalle
   const [subiendoPrincipal, setSubiendoPrincipal] = useState(false);
   const [subiendoGaleria, setSubiendoGaleria] = useState(false);
+
+  // La lista de arriba solo trae los que siguen a la venta (es lo que el panel
+  // necesita para trabajar). Los vendidos se piden aparte y solo si los mirás:
+  // son historial, no stock.
+  const [vista, setVista] = useState("venta"); // "venta" | "vendidos"
+  const [vendidos, setVendidos] = useState([]);
+  const [recargaVendidos, setRecargaVendidos] = useState(0);
+  const [cargandoVendidos, setCargandoVendidos] = useState(false);
+  const [aVender, setAVender] = useState(null);   // vehículo en el modal de venta
+  const [cerrando, setCerrando] = useState(null); // ref con una acción en curso
+
+  // Fuente de la tabla según la vista. Filtros, orden y búsqueda trabajan sobre
+  // esto, así sirven igual para el stock y para el historial de ventas.
+  const origen = vista === "vendidos" ? vendidos : vehiculos || [];
+
+  useEffect(() => {
+    if (vista !== "vendidos") return;
+    let activo = true;
+    setCargandoVendidos(true);
+    obtenerVehiculosAdmin("si")
+      .then((v) => { if (activo) setVendidos(v || []); })
+      .catch((e) => { if (activo) setError(e.message); })
+      .finally(() => { if (activo) setCargandoVendidos(false); });
+    return () => { activo = false; };
+  }, [vista, recargaVendidos]);
 
   const editando = editRef != null;
 
@@ -75,14 +107,14 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   );
 
   const marcas = useMemo(
-    () => [...new Set((vehiculos || []).map((v) => v.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    [vehiculos]
+    () => [...new Set((origen || []).map((v) => v.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [origen]
   );
 
   const filtrados = useMemo(() => {
     const q = (busqueda || "").trim().toLowerCase();
     const precioDe = (v) => v.precio_final ?? v.precio ?? 0;
-    const arr = (vehiculos || []).filter((v) => {
+    const arr = origen.filter((v) => {
       if (q && !`${v.brand} ${v.model} ${v.year}`.toLowerCase().includes(q)) return false;
       if (filtros.marca && v.brand !== filtros.marca) return false;
       if (filtros.condicion && v.condicion !== filtros.condicion) return false;
@@ -103,7 +135,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       anio_desc: (a, b) => b.year - a.year,
     }[filtros.orden] || (() => 0);
     return [...arr].sort(cmp);
-  }, [vehiculos, busqueda, filtros]);
+  }, [origen, busqueda, filtros]);
 
   function abrirAlta() {
     setEditRef(null);
@@ -119,6 +151,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       modelo: v.model || "",
       anio: String(v.year || ""),
       precio: String(v.precio || ""),
+      costo: v.costo != null ? String(v.costo) : "",
       kms: String(v.kms || ""),
       stock: String(v.stock ?? 1),
       condicion: v.condicion || "usado",
@@ -216,6 +249,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       modelo: form.modelo,
       anio: Number(form.anio),
       precio: Number(form.precio),
+      costo: form.costo === "" ? null : Number(form.costo),
       kms: Number(form.kms) || 0,
       stock: Number(form.stock),
       condicion: form.condicion,
@@ -237,17 +271,50 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     }
   }
 
-  async function borrar(v) {
-    setBorrandoRef(v.ref);
+  // Tras cualquier cierre comercial hay que refrescar las DOS listas: el auto
+  // se mueve de una a la otra.
+  function recargarTodo() {
+    onRecargar?.();
+    setRecargaVendidos((n) => n + 1);
+  }
+
+  async function confirmarVenta({ precioVenta, vendidoAt }) {
+    setCerrando(aVender.ref);
     setError(null);
     try {
-      await eliminarVehiculo(v.ref);
-      setABorrar(null);
-      onRecargar?.();
+      await marcarVehiculoVendido(aVender.ref, { precioVenta, vendidoAt });
+      setAVender(null);
+      recargarTodo();
     } catch (err) {
-      setError(err.message || "No se pudo eliminar.");
+      setError(err.message || "No se pudo marcar como vendido.");
     } finally {
-      setBorrandoRef(null);
+      setCerrando(null);
+    }
+  }
+
+  async function cerrarConsignacion(v, estado) {
+    setCerrando(v.ref);
+    setError(null);
+    try {
+      await cerrarConsignacionVehiculo(v.ref, estado);
+      recargarTodo();
+    } catch (err) {
+      setError(err.message || "No se pudo cerrar la consignación.");
+    } finally {
+      setCerrando(null);
+    }
+  }
+
+  async function deshacerVenta(v) {
+    setCerrando(v.ref);
+    setError(null);
+    try {
+      await deshacerVentaVehiculo(v.ref);
+      recargarTodo();
+    } catch (err) {
+      setError(err.message || "No se pudo deshacer la venta.");
+    } finally {
+      setCerrando(null);
     }
   }
 
@@ -277,22 +344,103 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     </div>
   );
 
-  const accionesVehiculo = (v) => (
-    <div className="flex items-center gap-1.5">
-      <button onClick={() => abrirEdicion(v)} title="Editar" className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors">
-        <Pencil className="w-3.5 h-3.5" />
-      </button>
-      <button onClick={() => setABorrar(v)} disabled={borrandoRef === v.ref} title="Eliminar" className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/50 transition-colors disabled:opacity-50">
-        {borrandoRef === v.ref ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-      </button>
-    </div>
-  );
+  // Insignia de consignación: el auto es de un tercero, no del stock propio.
+  // Cambia qué se puede hacer con él, así que tiene que verse en la fila.
+  const insigniaConsignacion = (v) =>
+    v.consignacion ? (
+      <span
+        title={`En consignación de ${v.consignacion.duenio_nombre} · comisión ${v.consignacion.comision}%`}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border text-amber-500 border-amber-500/30 bg-amber-500/10"
+      >
+        <Handshake className="w-3 h-3" /> Consignación
+      </span>
+    ) : null;
+
+  const accionesVehiculo = (v) => {
+    const ocupado = cerrando === v.ref;
+    const spinner = <Loader2 className="w-3.5 h-3.5 animate-spin" />;
+
+    // Ya vendido: la única acción es deshacerlo (se marcó por error).
+    if (v.vendido) {
+      return (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => deshacerVenta(v)}
+            disabled={ocupado}
+            title="Deshacer venta"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors disabled:opacity-50"
+          >
+            {ocupado ? spinner : <Undo2 className="w-3.5 h-3.5" />} Deshacer
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-1.5">
+        {/* Auto de tercero: se cierra el trato, no se "vende" stock propio.
+            Retirado NO es una venta: el dueño se lo llevó. */}
+        {v.consignacion ? (
+          <>
+            <button
+              onClick={() => cerrarConsignacion(v, "vendido")}
+              disabled={ocupado}
+              title={`Vendido · comisión ${v.consignacion.comision}% de ${precioARS(v.consignacion.precio_pactado)}`}
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              {ocupado ? spinner : <CircleDollarSign className="w-3.5 h-3.5" />} Vendido
+            </button>
+            <button
+              onClick={() => cerrarConsignacion(v, "retirado")}
+              disabled={ocupado}
+              title="El dueño retiró el vehículo (no es una venta)"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors disabled:opacity-50"
+            >
+              Retirado
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setAVender(v)}
+            disabled={ocupado}
+            title="Marcar como vendido"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+          >
+            {ocupado ? spinner : <CircleDollarSign className="w-3.5 h-3.5" />} Vendido
+          </button>
+        )}
+
+        <button onClick={() => abrirEdicion(v)} title="Editar" className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <p className="text-sm text-muted-foreground">{vehiculos.length} vehículos en el catálogo</p>
-        {esAdmin && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Por defecto se ve el stock. Los vendidos son historial y solo se
+              cargan si los pedís. */}
+          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border">
+            {[{ k: "venta", l: "A la venta" }, { k: "vendidos", l: "Vendidos" }].map((o) => (
+              <button
+                key={o.k}
+                onClick={() => setVista(o.k)}
+                className={`h-7 px-3 rounded-md text-xs font-medium transition-colors ${
+                  vista === o.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {o.l}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {cargandoVendidos ? "Cargando…" : `${origen.length} ${vista === "vendidos" ? "vendidos" : "en el catálogo"}`}
+          </p>
+        </div>
+        {esAdmin && vista === "venta" && (
           <button
             onClick={abrirAlta}
             className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition-opacity"
@@ -397,7 +545,12 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                       {v.condicion === "0km" ? "0 km" : "Usado"}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5">{beneficios(v)}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {insigniaConsignacion(v)}
+                      {beneficios(v)}
+                    </div>
+                  </td>
                   {esAdmin && (
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end">{accionesVehiculo(v)}</div>
@@ -449,7 +602,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 </div>
               </button>
               {(v.descuento || (v.promociones || []).length > 0) && (
-                <div className="px-3 pb-2">{beneficios(v)}</div>
+                <div className="px-3 pb-2 flex flex-wrap items-center gap-1">
+                  {insigniaConsignacion(v)}
+                  {beneficios(v)}
+                </div>
               )}
               {esAdmin && (
                 <div className="border-t border-border px-3 py-2 flex justify-end">{accionesVehiculo(v)}</div>
@@ -520,6 +676,16 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 <Campo label="Precio (ARS) *" tipo="number" valor={form.precio} onCambio={(v) => cambiar("precio", v)} placeholder="12500000" />
                 <Campo label="Stock (unidades)" tipo="number" valor={form.stock} onCambio={(v) => cambiar("stock", v)} placeholder="1" />
               </div>
+              {/* Lo que PAGÓ la agencia. Es lo único que permite calcular la
+                  ganancia neta; sin esto la venta suma facturación pero 0 de
+                  ganancia. No se muestra en el sitio público. */}
+              <Campo
+                label="Costo de compra (ARS)"
+                tipo="number"
+                valor={form.costo}
+                onCambio={(v) => cambiar("costo", v)}
+                placeholder="Lo que pagaste por el vehículo"
+              />
               <label className="block">
                 <span className="block text-xs font-medium text-muted-foreground mb-1.5">Descripción</span>
                 <textarea
@@ -674,13 +840,14 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
         </Overlay>
       )}
 
-      <ConfirmarModal
-        abierto={!!aBorrar}
-        mensaje={`¿Seguro querés eliminar "${aBorrar?.brand} ${aBorrar?.model}"? Saldrá del catálogo (se conserva en la base).`}
-        cargando={borrandoRef === aBorrar?.ref}
-        onConfirmar={() => borrar(aBorrar)}
-        onCancelar={() => setABorrar(null)}
-      />
+      {aVender && (
+        <VenderModal
+          vehiculo={aVender}
+          cargando={cerrando === aVender.ref}
+          onConfirmar={confirmarVenta}
+          onCancelar={() => setAVender(null)}
+        />
+      )}
     </div>
   );
 }

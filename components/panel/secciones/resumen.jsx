@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Users, Flame, Thermometer, Snowflake, Tag, MessageSquare } from "lucide-react";
+import { Users, Flame, Thermometer, Snowflake, Tag, MessageSquare, Eye } from "lucide-react";
 import { TarjetaMetrica } from "../tarjeta-metrica";
 import { obtenerMetricas } from "@/lib/api";
 
@@ -60,6 +60,7 @@ export function SeccionResumen({ resumen }) {
         <TarjetaMetrica titulo="Consultas frías" valor={consultas.FRIO} icon={Snowflake} color="text-chart-1" delay={3} />
         <TarjetaMetrica titulo="Quieren vender" valor={metricas?.ventasTotal ?? resumen?.ventas ?? 0} icon={Tag} color="text-chart-5" delay={4} />
         <TarjetaMetrica titulo="Consultas totales" valor={consultas.total} icon={MessageSquare} color="text-foreground" delay={5} />
+        <TarjetaMetrica titulo="Visitas totales" valor={metricas?.vistasTotal ?? 0} icon={Eye} color="text-success" delay={6} />
         </div>
       </div>
 
@@ -74,6 +75,7 @@ export function SeccionResumen({ resumen }) {
             <TarjetaMetrica titulo="Tibios hoy" valor={metricas.hoy.tibios} icon={Thermometer} color="text-warning" delay={3} />
             <TarjetaMetrica titulo="Fríos hoy" valor={metricas.hoy.frios} icon={Snowflake} color="text-chart-1" delay={4} />
             <TarjetaMetrica titulo="Quieren vender hoy" valor={metricas.hoy.ventas} icon={Tag} color="text-chart-5" delay={5} />
+            <TarjetaMetrica titulo="Visitas hoy" valor={metricas.hoy.vistas ?? 0} icon={Eye} color="text-success" delay={6} />
           </div>
         </div>
       )}
@@ -87,7 +89,12 @@ export function SeccionResumen({ resumen }) {
 
       {/* Distribución y ranking (recharts cargado de forma diferida) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <GraficosResumen datosClasif={datosClasif} topAutos={topAutos} colores={COLORES} />
+        <GraficosResumen
+          datosClasif={datosClasif}
+          topAutos={topAutos}
+          topVistas={metricas?.topVistas ?? []}
+          colores={COLORES}
+        />
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ import { SeccionConsignaciones } from "./secciones/consignaciones";
 import { SeccionAsesores } from "./secciones/asesores";
 import { SeccionEntregas } from "./secciones/entregas";
 import { SeccionVehiculos } from "./secciones/vehiculos";
+import { SeccionContabilidad } from "./secciones/contabilidad";
 import { SeccionDescuentos } from "./secciones/descuentos";
 import { SeccionConfiguracion } from "./secciones/configuracion";
 
@@ -216,6 +217,7 @@ export function Panel({ consultaId = null }) {
                 <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
               )}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
+              {seccion === "contabilidad" && <SeccionContabilidad />}
               {seccion === "descuentos" && (
                 <SeccionDescuentos
                   descuentos={descuentos}

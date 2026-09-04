@@ -11,22 +11,19 @@ import {
   etiquetaDescuento,
   etiquetaPromo,
 } from "@/lib/vehiculos";
-import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
-import { useNombreAgencia } from "@/lib/negocio";
 
 // Tarjeta de vehículo del sitio público: con caja —borde, foto a sangre arriba,
 // cuerpo con padding y CTA al pie—. La usan la portada y el catálogo, así que
 // cualquier cambio se ve en los dos lados.
 //
-// El "Consultar" abre el BOT de WhatsApp con la REF del vehículo: es lo que
-// permite que n8n ate la consulta a este auto. Ojo con cambiarlo por un chat
-// directo a un asesor — se pierde el seguimiento del lead.
+// El CTA solo lleva a la ficha /catalogo/{ref}. La consulta al BOT de WhatsApp
+// —con la REF, que es lo que permite a n8n atar el lead a este auto— vive en
+// detalle-vehiculo, ya dentro de la ficha.
 
 const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
 function TarjetaVehiculo({ vehicle, index = 0 }) {
   const { ref, estaVisible } = usarEnVista();
-  const nombreAgencia = useNombreAgencia();
 
   const nombre = obtenerNombreCompletoVehiculo(vehicle);
   const sinKms = vehicle.condicion === "usado" && vehicle.kms === 0;
@@ -34,9 +31,6 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
   const descuento = vehicle.ahorro > 0 ? vehicle.descuento : null;
   const promos = vehicle.promociones ?? [];
   const tieneBeneficio = Boolean(descuento) || promos.length > 0;
-
-  const abrirBot = () =>
-    window.open(obtenerUrlWhatsAppBotVehiculo(vehicle, nombreAgencia), "_blank", "noopener,noreferrer");
 
   return (
     <div
@@ -169,11 +163,13 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
           </div>
 
           <Boton
-            onClick={abrirBot}
+            asChild
             className="w-full rounded-full text-xs sm:text-sm h-9 sm:h-10 bg-brand text-white hover:bg-white hover:text-brand transition-all duration-300 group/btn border-0 hover:border hover:border-brand"
           >
-            Consultar
-            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5 sm:ml-2 transition-transform group-hover/btn:translate-x-1" />
+            <Link href={`/catalogo/${vehicle.ref}`}>
+              Ver
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5 sm:ml-2 transition-transform group-hover/btn:translate-x-1" />
+            </Link>
           </Boton>
         </div>
       </div>

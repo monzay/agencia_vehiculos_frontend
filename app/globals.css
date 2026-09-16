@@ -510,3 +510,35 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Impresión de los papeles de consignación (contrato y recibos).
+   La hoja se monta con un portal a <body>, así que basta con ocultar todo lo
+   que sea hermano suyo: el panel entero desaparece y queda solo el documento,
+   en negro sobre blanco y sin los colores de pantalla. */
+@media print {
+  body > *:not(.hoja-impresion) {
+    display: none !important;
+  }
+  .hoja-impresion {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  .hoja-impresion * {
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+  .sin-imprimir {
+    display: none !important;
+  }
+  /* Cada documento arranca en su propia página. */
+  .salto-pagina {
+    break-before: page;
+  }
+  @page {
+    margin: 16mm;
+  }
+}

@@ -8,6 +8,21 @@ export const runtime = "nodejs";
 const MAX_ENTRADA = 10 * 1024 * 1024; // 10 MB de entrada (antes de optimizar)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+// Dos destinos, dos stores de Blob distintos.
+//
+// El catálogo son fotos de autos que se publican en el sitio: store público, y
+// la URL es el dato útil. Los documentos son DNI, títulos y cédulas de clientes
+// reales: store PRIVADO, la URL sola no abre nada, y lo que se guarda es el
+// pathname para firmarlo cuando alguien con permiso lo quiera ver.
+//
+// La separación es por store y no por un parámetro dentro del mismo, a propósito:
+// si algún día se manda el destino equivocado, el archivo cae en el store que no
+// es y se nota. Con un solo store, equivocarse dejaba un DNI público en silencio.
+const DESTINOS = {
+  catalogo: { prefijo: "vehiculos/imagen.jpg", access: "public", token: () => process.env.BLOB_READ_WRITE_TOKEN },
+  documentos: { prefijo: "documentos/papel.jpg", access: "private", token: () => process.env.BLOB_DOCUMENTOS_TOKEN },
+};
+
 // Valida el JWT del panel contra el backend (sin duplicar el secreto en el front)
 // y exige rol admin: subir imágenes es una acción del panel, no algo público.
 // Devuelve true solo si el token es válido y pertenece a un admin.
@@ -29,7 +44,8 @@ async function esAdmin(request) {
 
 // Recibe un archivo de imagen, lo optimiza con sharp (auto-orienta + descarta EXIF,
 // redimensiona a 1600px máx sin agrandar, y comprime a JPEG progresivo) y lo guarda
-// en Vercel Blob (público). Devuelve { url }. Token: BLOB_READ_WRITE_TOKEN del entorno.
+// en el store de Blob que corresponda según el campo `destino` del formulario.
+// Devuelve { url } para el catálogo y { pathname } para los documentos.
 export async function POST(request) {
   try {
     if (!(await esAdmin(request))) {
@@ -38,6 +54,16 @@ export async function POST(request) {
 
     const form = await request.formData();
     const file = form.get("file");
+
+    // Sin destino se asume catálogo: es lo que hacían las pantallas que ya
+    // existían antes de que hubiera un segundo store.
+    const destino = DESTINOS[form.get("destino") || "catalogo"];
+    if (!destino) {
+      return NextResponse.json({ error: "Destino de imagen desconocido." }, { status: 400 });
+    }
+    if (!destino.token()) {
+      return NextResponse.json({ error: "El almacenamiento de imágenes no está configurado." }, { status: 503 });
+    }
 
     if (!file || typeof file.arrayBuffer !== "function") {
       return NextResponse.json({ error: "No se recibió ningún archivo." }, { status: 400 });
@@ -92,8 +118,9 @@ export async function POST(request) {
 
     let blob;
     try {
-      blob = await put("vehiculos/imagen.jpg", salida, {
-        access: "public",
+      blob = await put(destino.prefijo, salida, {
+        access: destino.access,
+        token: destino.token(),
         contentType: "image/jpeg",
         addRandomSuffix: true,
       });
@@ -106,7 +133,10 @@ export async function POST(request) {
       );
     }
 
-    return NextResponse.json({ url: blob.url });
+    // El catálogo necesita la URL, que es pública y no vence. Los documentos
+    // necesitan el pathname: su URL hay que firmarla cada vez, así que guardar
+    // la de ahora sería guardar un enlace que mañana no abre.
+    return NextResponse.json(destino.access === "private" ? { pathname: blob.pathname } : { url: blob.url });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }

@@ -12,12 +12,16 @@ const titulos = {
   financiacion: { titulo: "Financiación", sub: "Clientes que accedieron a un plan de cuotas" },
   ventas: { titulo: "Vender / Consignación", sub: "Consultas de venta directa y consignación" },
   consignaciones: { titulo: "Consignaciones", sub: "Vehículos que la agencia vende por cuenta del dueño" },
+  documentos: { titulo: "Documentos", sub: "Consignaciones tomadas: papeles, contrato y recibos" },
   vehiculos: { titulo: "Vehículos", sub: "Catálogo y stock de la agencia" },
   descuentos: { titulo: "Descuentos / Promos", sub: "Rebajas y promociones aplicadas" },
   asesores: { titulo: "Asesores", sub: "Equipo de ventas" },
   entregas: { titulo: "Entregas", sub: "Fotos de entregas que se muestran en el home" },
   configuracion: { titulo: "Configuración", sub: "Cuenta, datos de la agencia y automatización del bot" },
 };
+
+// Secciones sin lista que filtrar: el buscador no tendría sobre qué actuar.
+const SIN_BUSCADOR = ["resumen"];
 
 export function Encabezado({ seccion, busqueda, onBusqueda, onActualizar, cargando, usuario, onAbrirMenu }) {
   const info = titulos[seccion] ?? { titulo: "Panel", sub: "" };
@@ -42,7 +46,7 @@ export function Encabezado({ seccion, busqueda, onBusqueda, onActualizar, cargan
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
-        {seccion !== "resumen" && (
+        {!SIN_BUSCADOR.includes(seccion) && (
           <Buscador valor={busqueda} onCambio={onBusqueda} className="w-44 sm:w-64" />
         )}
         <Boton variante="secundario" onClick={onActualizar}>

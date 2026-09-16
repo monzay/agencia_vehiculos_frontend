@@ -25,6 +25,7 @@ import { SeccionClientes } from "./secciones/clientes";
 import { SeccionFinanciacion } from "./secciones/financiacion";
 import { SeccionVentas } from "./secciones/ventas";
 import { SeccionConsignaciones } from "./secciones/consignaciones";
+import { SeccionDocumentos } from "./secciones/documentos";
 import { SeccionAsesores } from "./secciones/asesores";
 import { SeccionEntregas } from "./secciones/entregas";
 import { SeccionVehiculos } from "./secciones/vehiculos";
@@ -216,6 +217,7 @@ export function Panel({ consultaId = null }) {
               {seccion === "consignaciones" && (
                 <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
               )}
+              {seccion === "documentos" && <SeccionDocumentos busqueda={busqueda} esAdmin={esAdmin} />}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
               {seccion === "contabilidad" && <SeccionContabilidad />}
               {seccion === "descuentos" && (

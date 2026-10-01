@@ -12,21 +12,26 @@ import {
   Check,
   Lock,
   Unlock,
+  Globe,
+  EyeOff,
+  LogOut,
 } from "lucide-react";
-import { obtenerIngreso, firmarContratoIngreso, desfirmarContratoIngreso } from "@/lib/api";
+import { obtenerIngreso, cambiarEstadoIngreso } from "@/lib/api";
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { Boton } from "../../ui/boton";
 import { Insignia } from "../../ui/insignia";
 import { Aviso } from "./campos";
 import { Papeles } from "./papeles";
-import { ContratoFormulario } from "./contrato-formulario";
 import { Impresos } from "./impresos";
+import { RequisitosContrato } from "./requisitos-contrato";
+import { PublicarModal } from "./publicar-modal";
 import { VINCULO } from "./vinculos";
-import { tituloVehiculo, tieneVehiculo } from "./formato";
+import { CONTRATOS } from "./contratos";
+import { MODALIDAD } from "./modalidades";
+import { tituloVehiculo, tieneVehiculo, dni, cuit, fechaDeMomento } from "./formato";
 
 // Legajo de un ingreso: el vehículo, quién lo dejó, los papeles y el contrato.
 
-const pesos = (n) => (n == null ? "—" : `$ ${Math.round(n).toLocaleString("es-AR")}`);
 const nombreCompleto = (p) => (p ? [p.nombre, p.apellido].filter(Boolean).join(" ") || "Sin nombre" : "—");
 
 const ESTADOS = {
@@ -43,8 +48,6 @@ const PESTANAS = [
 // El CBU no se muestra acá a propósito: es el dato más sensible del legajo y en
 // esta pantalla no se usa para nada. Se carga en el formulario y se imprime en
 // la cláusula de liquidación del contrato, que es donde hace falta.
-const dni = (v) => (v ? Number(v).toLocaleString("es-AR") : null);
-const cuit = (v) => (v && v.length === 11 ? `${v.slice(0, 2)}-${v.slice(2, 10)}-${v.slice(10)}` : v || null);
 const direccion = (p) => [p.domicilio, p.localidad, p.provincia].filter(Boolean).join(", ") || null;
 
 const FILAS = [
@@ -62,7 +65,7 @@ const FILAS = [
 // grilla sirve para cualquier ancho de pantalla.
 function Titular({ persona }) {
   return (
-    <div className="pt-3 border-t border-border">
+    <div>
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Titular</p>
       <p className="text-sm text-foreground inline-flex items-center gap-1.5 mb-2">
         <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -79,44 +82,26 @@ function Titular({ persona }) {
   );
 }
 
-function ResumenContrato({ contrato }) {
-  if (!contrato) {
-    return <p className="text-sm text-muted-foreground">Todavía no se cargaron las condiciones del contrato.</p>;
-  }
-
-  const comision = contrato.comision.tipo === "porcentaje" ? `${contrato.comision.valor} %` : pesos(contrato.comision.valor);
+// Cuándo se creó el ingreso y cuándo entró al estado actual, al lado del
+// titular y con el mismo formato de filas. "En recepción" no lleva fecha
+// propia: es el estado inicial.
+function Fechas({ ingreso }) {
   const filas = [
-    ["Precio mínimo autorizado", pesos(contrato.precioMinimo)],
-    ["Comisión", `${comision} · ${contrato.comision.incluida ? "sale del precio" : "se suma"}`],
-    ["Plazo", `${contrato.plazoDias} días`],
-    ["Verificación / libre deuda", `${contrato.gastos.verificacion} / ${contrato.gastos.libreDeuda}`],
-    ["Lavado / publicación", `${contrato.gastos.lavado} / ${contrato.gastos.publicacion}`],
-    [
-      "Retiro anticipado",
-      contrato.retiroAnticipado.avisoDias || contrato.retiroAnticipado.costo
-        ? `${contrato.retiroAnticipado.avisoDias} días de aviso · ${pesos(contrato.retiroAnticipado.costo)}`
-        : "Sin condiciones",
-    ],
-    ["Prueba de manejo", contrato.pruebaManejo.permitida ? `Sí · responde ${contrato.pruebaManejo.responsable}` : "No"],
-    ["Seguro a cargo de", contrato.seguroACargo],
-    ["Liquidación", `${contrato.liquidacion.dias} días · ${contrato.liquidacion.forma}`],
+    { label: "Creado", valor: fechaDeMomento(ingreso.creado) },
+    ...(ingreso.estado !== "recepcion"
+      ? [{ label: ESTADOS[ingreso.estado]?.label ?? ingreso.estado, valor: fechaDeMomento(ingreso.estadoDesde) }]
+      : []),
   ];
-
   return (
-    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-      {filas.map(([etiqueta, valor]) => (
-        <div key={etiqueta} className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
-          <dt className="text-xs text-muted-foreground">{etiqueta}</dt>
-          <dd className="text-sm text-foreground text-right">{valor}</dd>
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Fechas</p>
+      {filas.map(({ label, valor }) => (
+        <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-x-4 py-1 border-t border-border">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          <span className="text-xs text-foreground tabular-nums">{valor || <span className="text-muted-foreground">—</span>}</span>
         </div>
       ))}
-      {contrato.estadoUnidad && (
-        <div className="sm:col-span-2 pt-1">
-          <dt className="text-xs text-muted-foreground">Estado de la unidad</dt>
-          <dd className="text-sm text-foreground mt-0.5">{contrato.estadoUnidad}</dd>
-        </div>
-      )}
-    </dl>
+    </div>
   );
 }
 
@@ -126,7 +111,10 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
   const [pestana, setPestana] = useState("papeles");
   const [editandoContrato, setEditandoContrato] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
+  const [publicando, setPublicando] = useState(false);
   const [firmando, setFirmando] = useState(false);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [avisos, setAvisos] = useState([]);
 
   const cargar = useCallback(() => {
     setError(null);
@@ -145,12 +133,30 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
     onCambio?.();
   };
 
+  // Publicar / despublicar / retirar. El backend es el que decide si se puede:
+  // acá no se replican las reglas, se muestra lo que responde.
+  async function cambiarEstado(estado) {
+    setCambiandoEstado(true);
+    setError(null);
+    setAvisos([]);
+    try {
+      const r = await cambiarEstadoIngreso(ingreso.id, estado);
+      setAvisos(r.avisos ?? []);
+      refrescar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCambiandoEstado(false);
+    }
+  }
+
   async function alternarFirma() {
     setFirmando(true);
     setError(null);
     try {
-      if (ingreso.contrato?.firmado) await desfirmarContratoIngreso(ingreso.id);
-      else await firmarContratoIngreso(ingreso.id);
+      const { firmar, desfirmar } = CONTRATOS[ingreso.modalidad];
+      if (ingreso.contrato?.firmado) await desfirmar(ingreso.id);
+      else await firmar(ingreso.id);
       refrescar();
     } catch (e) {
       setError(e.message);
@@ -179,7 +185,13 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
   const { vehiculo, contrato } = ingreso;
   const estado = ESTADOS[ingreso.estado] ?? { label: ingreso.estado, variante: "neutral" };
   const firmado = Boolean(contrato?.firmado);
-
+  // Solo la consignación trae requisitos. Un contrato ya firmado no se bloquea:
+  // es la copia que el cliente tiene en la mano.
+  const contratoBloqueado = Boolean(ingreso.requisitosContrato && !ingreso.requisitosContrato.habilitado && !firmado);
+  const { Resumen, Formulario } = CONTRATOS[ingreso.modalidad];
+  // Publicar y retirar son de la consignación: el auto comprado o tomado en parte de pago ya
+  // es de la agencia.
+  const esConsignacion = ingreso.modalidad === "consignacion";
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -192,13 +204,22 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
               <Pencil className="w-3.5 h-3.5" /> Editar ingreso
             </Boton>
           )}
-          <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => setImprimiendo(true)} disabled={!contrato}>
+          <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => setImprimiendo(true)} disabled={!contrato || contratoBloqueado}>
             <Printer className="w-3.5 h-3.5" /> Contrato y recibos
           </Boton>
         </div>
       </div>
 
       {error && <Aviso>{error}</Aviso>}
+      {/* Lo que quedó a medias al publicar. Es aviso y no error: el auto ya está
+          en la web, pero le falta algo para que la ficha no salga pobre. */}
+      {avisos.length > 0 && (
+        <Aviso tono="alerta">
+          {avisos.map((a) => (
+            <p key={a}>{a}</p>
+          ))}
+        </Aviso>
+      )}
 
       {/* Cabecera del legajo */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
@@ -219,17 +240,65 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
               </span>
             )}
           </h2>
-          <div className="flex items-center gap-2">
-            <Insignia variante={estado.variante}>{estado.label}</Insignia>
+          <div className="flex flex-wrap items-center gap-2">
+            <Insignia variante="neutral">{MODALIDAD[ingreso.modalidad].label}</Insignia>
+            {esConsignacion && <Insignia variante={estado.variante}>{estado.label}</Insignia>}
             {firmado && (
               <Insignia variante="exito">
                 <Check className="w-3 h-3" /> Contrato firmado
               </Insignia>
             )}
+
+            {/* Solo las acciones que este estado admite. Un desplegable con los
+                tres valores ofrecería "publicado" aunque falte firmar, y el
+                rechazo llegaría recién al intentarlo. */}
+            {esAdmin && esConsignacion && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {ingreso.estado !== "publicado" && (
+                  <Boton
+                    variante="secundario"
+                    tamano="sm"
+                    className="gap-1.5"
+                    cargando={cambiandoEstado}
+                    onClick={() => setPublicando(true)}
+                    title={firmado ? "Cargá las fotos y poné el auto a la venta" : "Primero hay que firmar el contrato"}
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Publicar
+                  </Boton>
+                )}
+                {ingreso.estado === "publicado" && (
+                  <Boton
+                    variante="secundario"
+                    tamano="sm"
+                    className="gap-1.5"
+                    cargando={cambiandoEstado}
+                    onClick={() => cambiarEstado("recepcion")}
+                    title="Lo saca de la web; la ficha y sus fotos se conservan"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" /> Despublicar
+                  </Boton>
+                )}
+                {ingreso.estado !== "retirado" && (
+                  <Boton
+                    variante="fantasma"
+                    tamano="sm"
+                    className="gap-1.5"
+                    cargando={cambiandoEstado}
+                    onClick={() => cambiarEstado("retirado")}
+                    title="El dueño se llevó el vehículo"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Marcar retirado
+                  </Boton>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <Titular persona={ingreso.titular} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 pt-3 border-t border-border">
+          <Titular persona={ingreso.titular} />
+          <Fechas ingreso={ingreso} />
+        </div>
       </div>
 
       {/* Papeles / Contrato */}
@@ -258,9 +327,19 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
 
       {pestana === "papeles" && <Papeles ingreso={ingreso} catalogo={catalogo} esAdmin={esAdmin} onCambio={refrescar} />}
 
-      {pestana === "contrato" && (
+      {pestana === "contrato" && contratoBloqueado && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <RequisitosContrato requisitos={ingreso.requisitosContrato} />
+        </div>
+      )}
+
+      {pestana === "contrato" && !contratoBloqueado && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-          <ResumenContrato contrato={contrato} />
+          {contrato ? (
+            <Resumen contrato={contrato} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Todavía no se cargaron las condiciones del contrato.</p>
+          )}
 
           {esAdmin && (
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
@@ -284,15 +363,27 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
       )}
 
       {editandoContrato && (
-        <ContratoFormulario
+        <Formulario
           ingresoId={ingreso.id}
+          modalidad={ingreso.modalidad}
           contrato={contrato}
           onCerrar={() => setEditandoContrato(false)}
           onGuardado={refrescar}
         />
       )}
 
-      {imprimiendo && <Impresos ingresoId={ingreso.id} onCerrar={() => setImprimiendo(false)} />}
+      {publicando && (
+        <PublicarModal
+          ingreso={ingreso}
+          onCerrar={() => setPublicando(false)}
+          onPublicado={(r) => {
+            setAvisos(r.avisos ?? []);
+            refrescar();
+          }}
+        />
+      )}
+
+      {imprimiendo && <Impresos ingresoId={ingreso.id} modalidad={ingreso.modalidad} onCerrar={() => setImprimiendo(false)} />}
     </div>
   );
 }

@@ -35,6 +35,11 @@ export function valorLegible(campo, valor) {
   }
 }
 
+// Documentos de una persona, con los separadores que tienen impresos en el
+// papel: "32.457.981" y "27-32457981-4" en vez de una tira de dígitos.
+export const dni = (v) => (v ? Number(v).toLocaleString("es-AR") : null);
+export const cuit = (v) => (v && v.length === 11 ? `${v.slice(0, 2)}-${v.slice(2, 10)}-${v.slice(10)}` : v || null);
+
 // Un ingreso no tiene vehículo hasta que se carga el título del automotor, que
 // es de donde salen marca, modelo, año y dominio.
 export const tieneVehiculo = (v) => Boolean(v?.dominio);

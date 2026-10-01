@@ -31,7 +31,7 @@ export function Texto({ label, valor, onCambio, placeholder, tipo = "text", ayud
   );
 }
 
-export function Area({ label, valor, onCambio, placeholder, filas = 3, ayuda, className }) {
+export function Area({ label, valor, onCambio, placeholder, filas = 3, ayuda, className, maximo }) {
   return (
     <Etiqueta label={label} ayuda={ayuda} className={className}>
       <textarea
@@ -39,6 +39,7 @@ export function Area({ label, valor, onCambio, placeholder, filas = 3, ayuda, cl
         onChange={(e) => onCambio(e.target.value)}
         placeholder={placeholder}
         rows={filas}
+        maxLength={maximo}
         className={cn(CLASE_INPUT, "py-2 resize-y")}
       />
     </Etiqueta>

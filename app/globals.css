@@ -515,6 +515,31 @@
    La hoja se monta con un portal a <body>, así que basta con ocultar todo lo
    que sea hermano suyo: el panel entero desaparece y queda solo el documento,
    en negro sobre blanco y sin los colores de pantalla. */
+/* En pantalla las hojas se ven separadas por una línea de corte, para que la
+   vista previa muestre dónde termina cada papel. */
+.hoja + .hoja {
+  margin-top: 2.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}
+
+/* Una hoja que ocupa la carilla entera. 265 mm es el alto útil de una A4 con
+   los 16 mm de margen del @page; se deja un colchón de 5 mm para que un
+   redondeo del navegador no empuje la hoja a una segunda página. Al ser columna
+   flex, lo que lleve `mt-auto` (las firmas) baja al pie del papel. La vista
+   previa usa el mismo alto, así que en pantalla se ve dónde termina la hoja. */
+.hoja-pagina {
+  display: flex;
+  flex-direction: column;
+  min-height: 260mm;
+}
+
+/* La marca de agua del contrato. El gris va acá y no en el componente porque
+   la impresión lo pisa: ver la excepción dentro de @media print. */
+.marca-agua {
+  color: rgba(0, 0, 0, 0.09);
+}
+
 @media print {
   body > *:not(.hoja-impresion) {
     display: none !important;
@@ -534,11 +559,31 @@
   .sin-imprimir {
     display: none !important;
   }
-  /* Cada documento arranca en su propia página. */
-  .salto-pagina {
-    break-before: page;
+  /* La regla de arriba pinta de negro todo lo que se imprime; la marca de agua
+     es la única excepción, si no sale un bloque negro tapando el contrato. */
+  .hoja-impresion .marca-agua,
+  .hoja-impresion .marca-agua * {
+    color: rgba(0, 0, 0, 0.1) !important;
+    print-color-adjust: exact;
   }
+  /* Al imprimir, el margen lo pone el @page: el relleno de la vista previa
+     sería alto perdido en cada hoja. */
+  .caja-impresion {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  /* Cada documento es una hoja y arranca en su propia página. La primera no
+     lleva salto, y la línea de corte solo existe en pantalla. */
+  .hoja + .hoja {
+    break-before: page;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  /* El tamaño va declarado: sin esto el navegador elige el papel y "entra en
+     una hoja" deja de ser una medida. El contrato está calibrado para A4. */
   @page {
+    size: A4;
     margin: 16mm;
   }
 }

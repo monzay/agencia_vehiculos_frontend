@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Car, User, Plus, Loader2, Trash2, FileText, AlertTriangle, Clock, Archive } from "lucide-react";
-import { obtenerIngresos, eliminarIngreso, obtenerCatalogoDocumentos } from "@/lib/api";
+import { Car, User, Plus, Loader2, AlertTriangle, Clock, Archive } from "lucide-react";
+import { obtenerIngresos, obtenerCatalogoDocumentos } from "@/lib/api";
 import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { Boton } from "../../ui/boton";
 import { Tabla, FILA, CELDA } from "../../ui/tabla";
 import { Insignia } from "../../ui/insignia";
-import { ConfirmarModal } from "../../ui/confirmar-modal";
 import { Aviso } from "./campos";
-import { MODALIDADES } from "./modalidades";
+import { MODALIDADES, MODALIDAD } from "./modalidades";
 import { tituloVehiculo, tieneVehiculo } from "./formato";
 import { IngresoFormulario } from "./ingreso-formulario";
 import { IngresoDetalle } from "./ingreso-detalle";
 
-// Documentos: cómo entra un vehículo a la agencia y qué papeles hacen falta.
-// Por ahora solo está implementada la consignación; las otras dos modalidades
-// esperan a que se definan sus circuitos.
+// Documentos: cómo entra un vehículo a la agencia (consignación, parte de
+// pago o compra) y qué papeles hacen falta. Las tres comparten el legajo de papeles;
+// cambia el contrato que se firma.
 
 const PAGINA = 10;
 
@@ -28,7 +27,6 @@ const COLUMNAS = [
   { label: "Originales" },
   { label: "Contrato" },
   { label: "Estado" },
-  { label: "", className: "w-12" },
 ];
 
 const ESTADOS = [
@@ -82,40 +80,28 @@ function EstadoPapeles({ papeles }) {
   );
 }
 
-function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
+function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
   const [estado, setEstado] = useState("");
   const [editando, setEditando] = useState(null); // null | undefined (nuevo) | ingreso
-  const [aBorrar, setABorrar] = useState(null);
-  const [borrando, setBorrando] = useState(false);
-  const [error, setError] = useState(null);
   const [recarga, setRecarga] = useState(0);
 
   const { items, total, hayMas, cargandoInicial, cargandoMas, error: errorLista, cargarMas } = usarListaPaginada(
-    ({ offset, limite }) => obtenerIngresos({ estado, q: busqueda, offset, limite }),
-    [estado, busqueda, recarga],
+    ({ offset, limite }) => obtenerIngresos({ modalidad, estado, q: busqueda, offset, limite }),
+    [modalidad, estado, busqueda, recarga],
     { limite: PAGINA }
   );
 
   const refrescar = () => setRecarga((n) => n + 1);
-
-  async function confirmarBorrado() {
-    setBorrando(true);
-    setError(null);
-    try {
-      await eliminarIngreso(aBorrar.id);
-      setABorrar(null);
-      refrescar();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBorrando(false);
-    }
-  }
+  const { nuevo } = MODALIDAD[modalidad];
+  const vacio = `Todavía no se registró ninguna ${MODALIDAD[modalidad].label.toLowerCase()}.`;
+  // Publicado y retirado son estados de la consignación: un auto comprado o
+  // tomado en parte de pago ya es de la agencia y no pasa por ahí.
+  const filtros = modalidad === "consignacion" ? FILTROS : [];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        {FILTROS.map((f) => (
+        {filtros.map((f) => (
           <button
             key={f.valor}
             type="button"
@@ -132,12 +118,12 @@ function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
         ))}
         {esAdmin && (
           <Boton variante="primario" className="ml-auto gap-1.5" onClick={() => setEditando(undefined)}>
-            <Plus className="w-4 h-4" /> Nueva consignación
+            <Plus className="w-4 h-4" /> {nuevo}
           </Boton>
         )}
       </div>
 
-      {(error || errorLista) && <Aviso>{error || errorLista}</Aviso>}
+      {errorLista && <Aviso>{errorLista}</Aviso>}
 
       {cargandoInicial ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -151,7 +137,7 @@ function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
 
           {/* Desktop: tabla */}
           <div className="hidden md:block">
-            <Tabla columnas={COLUMNAS} vacio={items.length === 0} mensajeVacio="Todavía no se registró ninguna consignación.">
+            <Tabla columnas={COLUMNAS} vacio={items.length === 0} mensajeVacio={vacio}>
               {items.map((i) => (
                 <tr key={i.id} className={cn(FILA, "cursor-pointer")} onClick={() => onAbrir(i.id)}>
                   <td className={CELDA}>
@@ -187,21 +173,6 @@ function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
                   <td className={`${CELDA} whitespace-nowrap`}>
                     <Insignia variante={VARIANTE_ESTADO[i.estado] ?? "neutral"}>{LABEL_ESTADO[i.estado] ?? i.estado}</Insignia>
                   </td>
-                  <td className={CELDA}>
-                    {esAdmin && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setABorrar(i);
-                        }}
-                        title="Eliminar"
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))}
             </Tabla>
@@ -210,9 +181,7 @@ function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
           {/* Móvil: tarjetas */}
           <div className="md:hidden space-y-3">
             {items.length === 0 ? (
-              <p className="text-center py-14 text-sm text-muted-foreground rounded-xl border border-border bg-card">
-                Todavía no se registró ninguna consignación.
-              </p>
+              <p className="text-center py-14 text-sm text-muted-foreground rounded-xl border border-border bg-card">{vacio}</p>
             ) : (
               items.map((i) => (
                 <button
@@ -254,21 +223,8 @@ function ListaIngresos({ busqueda, esAdmin, onAbrir }) {
       )}
 
       {editando !== null && (
-        <IngresoFormulario ingreso={editando} onCerrar={() => setEditando(null)} onGuardado={refrescar} />
+        <IngresoFormulario ingreso={editando} modalidad={modalidad} onCerrar={() => setEditando(null)} onGuardado={refrescar} />
       )}
-
-      <ConfirmarModal
-        abierto={Boolean(aBorrar)}
-        titulo="¿Eliminar este ingreso?"
-        mensaje={
-          aBorrar
-            ? `Se va a archivar ${tituloVehiculo(aBorrar.vehiculo)}${aBorrar.vehiculo.dominio ? ` (${aBorrar.vehiculo.dominio})` : ""} de ${nombreCompleto(aBorrar.titular)}. Los papeles y el contrato quedan guardados.`
-            : ""
-        }
-        cargando={borrando}
-        onConfirmar={confirmarBorrado}
-        onCancelar={() => setABorrar(null)}
-      />
     </div>
   );
 }
@@ -292,8 +248,6 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
       activo = false;
     };
   }, []);
-
-  const activa = MODALIDADES.find((m) => m.id === modalidad)?.activa;
 
   return (
     <div className="space-y-4">
@@ -320,21 +274,13 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
 
       {error && <Aviso>{error}</Aviso>}
 
-      {!activa && (
-        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
-          <FileText className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-foreground">Todavía no está definido el circuito de papeles de esta modalidad.</p>
-          <p className="text-xs text-muted-foreground mt-1">Consignación ya está operativa.</p>
-        </div>
-      )}
-
-      {activa && !catalogo && !error && (
+      {!catalogo && !error && (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       )}
 
-      {activa && catalogo && (
+      {catalogo && (
         abierto ? (
           <IngresoDetalle
             ingresoId={abierto}
@@ -345,7 +291,7 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
             onCambio={() => setRecarga((n) => n + 1)}
           />
         ) : (
-          <ListaIngresos key={recarga} busqueda={busqueda} esAdmin={esAdmin} onAbrir={setAbierto} />
+          <ListaIngresos key={`${modalidad}-${recarga}`} modalidad={modalidad} busqueda={busqueda} esAdmin={esAdmin} onAbrir={setAbierto} />
         )
       )}
 

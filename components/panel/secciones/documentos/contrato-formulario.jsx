@@ -25,6 +25,7 @@ const LIQUIDACION = [
 
 const VACIO = {
   precioMinimo: "",
+  precioPublicacion: "",
   comisionTipo: "porcentaje",
   comisionValor: "",
   comisionIncluida: true,
@@ -35,6 +36,7 @@ const VACIO = {
   gastosPublicacion: "agencia",
   retiroAvisoDias: "0",
   retiroCosto: "0",
+  retiroCondiciones: "",
   estadoUnidad: "",
   pruebaManejo: false,
   pruebaResponsable: "agencia",
@@ -47,6 +49,7 @@ const aFormulario = (c) =>
   c
     ? {
         precioMinimo: String(c.precioMinimo ?? ""),
+        precioPublicacion: String(c.precioPublicacion ?? ""),
         comisionTipo: c.comision.tipo,
         comisionValor: String(c.comision.valor ?? ""),
         comisionIncluida: c.comision.incluida,
@@ -57,6 +60,7 @@ const aFormulario = (c) =>
         gastosPublicacion: c.gastos.publicacion,
         retiroAvisoDias: String(c.retiroAnticipado.avisoDias ?? "0"),
         retiroCosto: String(c.retiroAnticipado.costo ?? "0"),
+        retiroCondiciones: c.retiroAnticipado.condiciones ?? "",
         estadoUnidad: c.estadoUnidad ?? "",
         pruebaManejo: c.pruebaManejo.permitida,
         pruebaResponsable: c.pruebaManejo.responsable ?? "agencia",
@@ -68,6 +72,15 @@ const aFormulario = (c) =>
 
 const pesos = (n) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
 
+// El mismo tope que la base: los montos son DECIMAL(12,2). Se avisa acá para
+// que un cero de más se vea en el campo y no vuelva como error del servidor.
+const TOPE_MONTO = 9999999999.99;
+const TOPE_TEXTO = `$ ${TOPE_MONTO.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+
+// Lo que entra en la carilla del contrato. Es el mismo número que valida el
+// backend: acá corta el tipeo, allá se rechaza lo que llegue por otra vía.
+const TOPE_LIBRE = 500;
+
 export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }) {
   const [form, setForm] = useState(() => aFormulario(contrato));
   const [error, setError] = useState(null);
@@ -76,22 +89,44 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
   const set = (campo) => (valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
   const precio = Number(form.precioMinimo);
+  const publicacion = Number(form.precioPublicacion);
   const valor = Number(form.comisionValor);
-  // Lo que se lleva la agencia si se vende justo al precio mínimo.
-  const comisionPesos =
-    Number.isFinite(precio) && Number.isFinite(valor) ? (form.comisionTipo === "porcentaje" ? (precio * valor) / 100 : valor) : null;
-  const recibeElCliente = comisionPesos == null ? null : form.comisionIncluida ? precio - comisionPesos : precio;
+
+  // Cómo queda repartida una venta cerrada a ese precio.
+  //
+  // Si la comisión "sale del precio", se descuenta de lo que cobra el dueño. Si
+  // "se suma", la paga el comprador por encima y el dueño cobra el precio
+  // entero: por eso el reparto no es el mismo en los dos casos.
+  const reparto = (precioVenta) => {
+    if (!Number.isFinite(precioVenta) || precioVenta <= 0 || !Number.isFinite(valor) || valor < 0) return null;
+    const agencia = form.comisionTipo === "porcentaje" ? (precioVenta * valor) / 100 : valor;
+    return { agencia, cliente: form.comisionIncluida ? precioVenta - agencia : precioVenta };
+  };
+
+  // Los dos extremos de la negociación: lo mejor y lo peor que puede pasar.
+  const escenarios = [
+    ["Precio de publicación", publicacion, reparto(publicacion)],
+    ["Mínimo autorizado", precio, reparto(precio)],
+  ].filter(([, , r]) => r);
 
   async function guardar() {
     if (!Number.isFinite(precio) || precio <= 0) return setError("El precio mínimo autorizado es obligatorio.");
+    if (!Number.isFinite(publicacion) || publicacion <= 0) return setError("El precio de publicación es obligatorio.");
+    // Mismo control que hace el backend, para avisar antes de gastar el viaje.
+    if (publicacion < precio) return setError("El precio de publicación no puede ser menor al mínimo. ¿Están invertidos?");
+    if (precio > TOPE_MONTO) return setError(`El precio mínimo autorizado no puede ser mayor a ${TOPE_TEXTO}.`);
+    if (publicacion > TOPE_MONTO) return setError(`El precio de publicación no puede ser mayor a ${TOPE_TEXTO}.`);
     if (!Number.isFinite(valor) || valor < 0) return setError("La comisión no es válida.");
     if (form.comisionTipo === "porcentaje" && valor > 100) return setError("La comisión no puede superar el 100 %.");
+    if (form.comisionTipo === "monto" && valor > TOPE_MONTO) return setError(`La comisión no puede ser mayor a ${TOPE_TEXTO}.`);
+    if (Number(form.retiroCosto) > TOPE_MONTO) return setError(`El costo de retiro anticipado no puede ser mayor a ${TOPE_TEXTO}.`);
 
     setGuardando(true);
     setError(null);
     try {
       await guardarContratoIngreso(ingresoId, {
         precioMinimo: precio,
+        precioPublicacion: publicacion,
         comisionTipo: form.comisionTipo,
         comisionValor: valor,
         comisionIncluida: form.comisionIncluida,
@@ -102,6 +137,7 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
         gastosPublicacion: form.gastosPublicacion,
         retiroAvisoDias: Number(form.retiroAvisoDias) || 0,
         retiroCosto: Number(form.retiroCosto) || 0,
+        retiroCondiciones: form.retiroCondiciones,
         estadoUnidad: form.estadoUnidad.trim() || null,
         pruebaManejo: form.pruebaManejo,
         pruebaResponsable: form.pruebaManejo ? form.pruebaResponsable : null,
@@ -123,8 +159,20 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
       <div className="px-6 py-5 space-y-5 overflow-y-auto">
         {error && <Aviso>{error}</Aviso>}
 
-        <Paso n={1} titulo="Precio y comisión" ayuda="Por debajo del mínimo no se puede cerrar sin consultar al dueño." primero>
+        <Paso
+          n={1}
+          titulo="Precio y comisión"
+          ayuda="Se publica al primero; por debajo del segundo no se cierra sin consultar al dueño."
+          primero
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Texto
+              label="Precio de publicación"
+              valor={form.precioPublicacion}
+              onCambio={set("precioPublicacion")}
+              inputMode="decimal"
+              placeholder="20000000"
+            />
             <Texto label="Precio mínimo autorizado" valor={form.precioMinimo} onCambio={set("precioMinimo")} inputMode="decimal" placeholder="18500000" />
             <Selector
               label="La comisión se pacta como"
@@ -152,11 +200,30 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
             />
           </div>
 
-          {comisionPesos != null && precio > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Vendiendo al mínimo, la agencia se lleva <span className="text-foreground tabular-nums">{pesos(comisionPesos)}</span> y el
-              cliente recibe <span className="text-foreground tabular-nums">{pesos(recibeElCliente)}</span>.
-            </p>
+          {escenarios.length > 0 && (
+            <div className="rounded-lg border border-border overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left font-normal px-3 py-2">Si se vende a</th>
+                    <th className="text-right font-normal px-3 py-2">Se lleva la agencia</th>
+                    <th className="text-right font-normal px-3 py-2">Recibe el cliente</th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums">
+                  {escenarios.map(([etiqueta, monto, r]) => (
+                    <tr key={etiqueta} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="text-muted-foreground">{etiqueta}</span>{" "}
+                        <span className="text-foreground">{pesos(monto)}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right text-foreground whitespace-nowrap">{pesos(r.agencia)}</td>
+                      <td className="px-3 py-2 text-right text-foreground whitespace-nowrap">{pesos(r.cliente)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Paso>
 
@@ -166,6 +233,14 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
             <Texto label="Aviso para retirarlo (días)" valor={form.retiroAvisoDias} onCambio={set("retiroAvisoDias")} inputMode="numeric" />
             <Texto label="Costo del retiro ($)" valor={form.retiroCosto} onCambio={set("retiroCosto")} inputMode="decimal" ayuda="0 si no paga nada." />
           </div>
+          <Area
+            label="Qué se pacta si lo retira antes"
+            valor={form.retiroCondiciones}
+            onCambio={set("retiroCondiciones")}
+            maximo={TOPE_LIBRE}
+            placeholder="Reintegra los gastos de publicación con comprobante. Si había una seña cobrada, abona la comisión completa…"
+            ayuda="Se imprime tal cual en la cláusula 6, después del aviso y el costo. Vacío = no se pactó nada especial."
+          />
         </Paso>
 
         <Paso n={3} titulo="Gastos" ayuda="Quién paga cada cosa mientras el auto está en el playón.">
@@ -202,6 +277,7 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
             label="Estado de la unidad al recibirla"
             valor={form.estadoUnidad}
             onCambio={set("estadoUnidad")}
+            maximo={TOPE_LIBRE}
             placeholder="Chapa, faltantes, cubiertas, rueda de auxilio…"
             ayuda="Los kilómetros salen del ingreso; acá va todo lo demás."
           />

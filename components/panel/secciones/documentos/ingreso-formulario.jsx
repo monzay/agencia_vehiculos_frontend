@@ -7,6 +7,7 @@ import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
 import { Texto, Area, Paso, Aviso } from "./campos";
 import { PersonaFormulario, aPersona } from "./persona-formulario";
+import { MODALIDAD } from "./modalidades";
 
 // Alta de la toma: quién deja el auto y cómo se recibió.
 //
@@ -46,7 +47,9 @@ function validar(recepcion, titular) {
 // validación de formato (un CUIT "" no es un CUIT de 11 dígitos).
 const sinVacios = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== "" && v != null));
 
-export function IngresoFormulario({ ingreso, onCerrar, onGuardado }) {
+// `modalidad` solo se usa al crear: un ingreso existente ya trae la suya y no
+// se cambia.
+export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) {
   const editando = Boolean(ingreso);
 
   const [recepcion, setRecepcion] = useState(() => aRecepcion(ingreso));
@@ -72,7 +75,7 @@ export function IngresoFormulario({ ingreso, onCerrar, onGuardado }) {
       };
 
       if (editando) await actualizarIngreso(ingreso.id, cuerpo);
-      else await crearIngreso(cuerpo);
+      else await crearIngreso({ ...cuerpo, modalidad });
 
       onGuardado();
       onCerrar();
@@ -85,7 +88,7 @@ export function IngresoFormulario({ ingreso, onCerrar, onGuardado }) {
 
   return (
     <Modal
-      titulo={editando ? "Editar ingreso" : "Nueva consignación"}
+      titulo={editando ? "Editar ingreso" : MODALIDAD[modalidad].nuevo}
       icono={Handshake}
       onCerrar={onCerrar}
       ancho="max-w-3xl"
@@ -96,7 +99,7 @@ export function IngresoFormulario({ ingreso, onCerrar, onGuardado }) {
         <Paso
           n={1}
           titulo="Titular"
-          ayuda="Quien deja el auto y firma el contrato. Buscalo primero: puede que ya esté cargado."
+          ayuda="Quien entrega el auto y firma el contrato. Buscalo primero: puede que ya esté cargado."
           primero
         >
           <PersonaFormulario persona={titular} onCambio={setTitular} />

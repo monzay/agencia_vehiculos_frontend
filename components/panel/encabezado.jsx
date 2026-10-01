@@ -12,7 +12,7 @@ const titulos = {
   financiacion: { titulo: "Financiación", sub: "Clientes que accedieron a un plan de cuotas" },
   ventas: { titulo: "Vender / Consignación", sub: "Consultas de venta directa y consignación" },
   consignaciones: { titulo: "Consignaciones", sub: "Vehículos que la agencia vende por cuenta del dueño" },
-  documentos: { titulo: "Documentos", sub: "Consignaciones tomadas: papeles, contrato y recibos" },
+  documentos: { titulo: "Documentos", sub: "Consignaciones, partes de pago y compras: papeles, contratos y recibos" },
   vehiculos: { titulo: "Vehículos", sub: "Catálogo y stock de la agencia" },
   descuentos: { titulo: "Descuentos / Promos", sub: "Rebajas y promociones aplicadas" },
   asesores: { titulo: "Asesores", sub: "Equipo de ventas" },

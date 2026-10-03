@@ -37,7 +37,16 @@ function repartoGastos(gastos) {
 
   if (!porQuien.cliente.length) return "Todos los gastos quedan a cargo de la agencia.";
   if (!porQuien.agencia.length) return "Todos los gastos quedan a cargo del cliente.";
-  return `A cargo del cliente: ${enumerar(porQuien.cliente)}. A cargo de la agencia: ${enumerar(porQuien.agencia)}.`;
+  // Un renglón por responsable, con sangría: se lee de un vistazo quién paga qué.
+  // Son <span> en bloque porque la cláusula es un párrafo.
+  return [
+    ["A cargo del cliente", porQuien.cliente],
+    ["A cargo de la agencia", porQuien.agencia],
+  ].map(([quien, items]) => (
+    <span key={quien} className="block pl-4">
+      — <span className="font-medium">{quien}:</span> {enumerar(items)}.
+    </span>
+  ));
 }
 
 // El plazo, en letras y con el número al lado. Un plazo de cero días no es "en
@@ -48,6 +57,24 @@ const plazoLiquidacion = (dias) =>
     : dias === 1
       ? "dentro de un (1) día"
       : `dentro de los ${apocopar(enLetras(dias))} (${dias}) días`;
+
+const dias = (n) => (n === 1 ? "1 día" : `${n} días`);
+// Lo pactado lo escribe la agencia a mano: se le asegura el punto final para
+// que la oración que sigue no quede pegada.
+const conPunto = (t) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`);
+
+// Cláusula 6. Primero si puede retirarlo y con cuánto aviso; después, si la
+// agencia lo escribió, a qué se compromete el titular en ese caso. El costo fijo
+// ya no se carga (se pacta por escrito), pero los contratos que lo tienen lo
+// siguen imprimiendo.
+function textoRetiro({ avisoDias, costo, condiciones }) {
+  const aviso = avisoDias > 0 ? `, avisando con ${dias(avisoDias)} de anticipación` : ", sin necesidad de preaviso";
+  const pago = costo > 0 ? ` y abonando ${pesos(costo)} en concepto de gastos` : "";
+  const pactado = condiciones
+    ? ` En caso de retirarlo antes del vencimiento del plazo, el titular se compromete a lo siguiente: ${conPunto(condiciones)}`
+    : "";
+  return `El titular puede retirar el vehículo antes del vencimiento del plazo${aviso}${pago}.${pactado}`;
+}
 
 // El bloque del vehículo recibido: el del ingreso, con los km con que entró.
 const vehiculoRecibido = (vehiculo) => ({
@@ -129,15 +156,7 @@ export function Contrato({ datos, copia, marcaAgua }) {
             {repartoGastos(c.gastos)}
           </Clausula>
           <Clausula n={6} titulo="Retiro anticipado">
-            {c.retiroAnticipado.avisoDias > 0 || c.retiroAnticipado.costo > 0
-              ? `El titular puede retirar el vehículo antes del vencimiento avisando con ${c.retiroAnticipado.avisoDias} días de anticipación${
-                  c.retiroAnticipado.costo > 0 ? `, abonando ${pesos(c.retiroAnticipado.costo)} en concepto de gastos` : ""
-                }.`
-              : "El titular puede retirar el vehículo en cualquier momento, sin costo ni preaviso."}
-            {/* Lo que la agencia haya pactado por escrito se suma a lo anterior, no
-                lo reemplaza: los días y el costo siguen siendo datos del contrato.
-                Los firmados antes de la migración 049 no lo traen. */}
-            {c.retiroAnticipado.condiciones ? ` ${c.retiroAnticipado.condiciones}` : ""}
+            {textoRetiro(c.retiroAnticipado)}
           </Clausula>
           <Clausula n={7} titulo="Estado de la unidad">
             Recibida con {kilometros(datos.vehiculo.kmRecepcion) ?? "—"} km.{" "}

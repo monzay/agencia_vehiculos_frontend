@@ -33,10 +33,11 @@ const ESTADOS = [
   { valor: "recepcion", label: "En recepción" },
   { valor: "publicado", label: "Publicados" },
   { valor: "retirado", label: "Retirados" },
+  { valor: "vendido", label: "Vendidos" },
 ];
 const FILTROS = [{ valor: "", label: "Todos" }, ...ESTADOS];
 const LABEL_ESTADO = Object.fromEntries(ESTADOS.map((e) => [e.valor, e.label]));
-const VARIANTE_ESTADO = { recepcion: "info", publicado: "exito", retirado: "neutral" };
+const VARIANTE_ESTADO = { recepcion: "info", publicado: "exito", retirado: "neutral", vendido: "exito" };
 
 const nombreCompleto = (p) => (p ? [p.nombre, p.apellido].filter(Boolean).join(" ") || "Sin nombre" : "—");
 

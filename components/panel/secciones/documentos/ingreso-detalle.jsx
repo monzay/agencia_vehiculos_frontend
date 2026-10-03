@@ -15,15 +15,17 @@ import {
   Globe,
   EyeOff,
   LogOut,
+  CircleDollarSign,
 } from "lucide-react";
-import { obtenerIngreso, cambiarEstadoIngreso } from "@/lib/api";
+import { obtenerIngreso, cambiarEstadoIngreso, venderIngreso } from "@/lib/api";
+import { VenderModal } from "../vender-modal";
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { Boton } from "../../ui/boton";
 import { Insignia } from "../../ui/insignia";
 import { Aviso } from "./campos";
 import { Papeles } from "./papeles";
 import { Impresos } from "./impresos";
-import { RequisitosContrato } from "./requisitos-contrato";
+import { RequisitosContrato, PapelesObligatorios } from "./requisitos-contrato";
 import { PublicarModal } from "./publicar-modal";
 import { VINCULO } from "./vinculos";
 import { CONTRATOS } from "./contratos";
@@ -38,6 +40,7 @@ const ESTADOS = {
   recepcion: { label: "En recepción", variante: "info" },
   publicado: { label: "Publicado", variante: "exito" },
   retirado: { label: "Retirado", variante: "neutral" },
+  vendido: { label: "Vendido", variante: "exito" },
 };
 
 const PESTANAS = [
@@ -45,9 +48,6 @@ const PESTANAS = [
   { id: "contrato", label: "Contrato" },
 ];
 
-// El CBU no se muestra acá a propósito: es el dato más sensible del legajo y en
-// esta pantalla no se usa para nada. Se carga en el formulario y se imprime en
-// la cláusula de liquidación del contrato, que es donde hace falta.
 const direccion = (p) => [p.domicilio, p.localidad, p.provincia].filter(Boolean).join(", ") || null;
 
 const FILAS = [
@@ -59,6 +59,8 @@ const FILAS = [
     label: "Tel. alternativo",
     valor: (p) => p.contactoAlternativo && `${p.contactoAlternativo.telefono} · ${VINCULO[p.contactoAlternativo.vinculo]}`,
   },
+  // Adónde se le paga al titular: el CBU y su alias, lo que haya.
+  { label: "CBU / Alias", valor: (p) => [p.cbu, p.aliasCbu].filter(Boolean).join(" · ") || null },
 ];
 
 // Los datos del titular, rótulo a la izquierda y valor a la derecha. Una sola
@@ -112,6 +114,8 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
   const [editandoContrato, setEditandoContrato] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
   const [publicando, setPublicando] = useState(false);
+  const [vendiendo, setVendiendo] = useState(false);
+  const [confirmandoVenta, setConfirmandoVenta] = useState(false);
   const [firmando, setFirmando] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [avisos, setAvisos] = useState([]);
@@ -252,7 +256,8 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
             {/* Solo las acciones que este estado admite. Un desplegable con los
                 tres valores ofrecería "publicado" aunque falte firmar, y el
                 rechazo llegaría recién al intentarlo. */}
-            {esAdmin && esConsignacion && (
+            {/* Vendido no tiene acciones acá: la venta se deshace desde Vehículos. */}
+            {esAdmin && esConsignacion && ingreso.estado !== "vendido" && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {ingreso.estado !== "publicado" && (
                   <Boton
@@ -280,7 +285,7 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
                 )}
                 {ingreso.estado !== "retirado" && (
                   <Boton
-                    variante="fantasma"
+                    variante="secundario"
                     tamano="sm"
                     className="gap-1.5"
                     cargando={cambiandoEstado}
@@ -288,6 +293,18 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
                     title="El dueño se llevó el vehículo"
                   >
                     <LogOut className="w-3.5 h-3.5" /> Marcar retirado
+                  </Boton>
+                )}
+                {/* Solo un auto publicado tiene ficha que vender. */}
+                {ingreso.estado === "publicado" && (
+                  <Boton
+                    variante="secundario"
+                    tamano="sm"
+                    className="gap-1.5"
+                    onClick={() => setVendiendo(true)}
+                    title="Se vendió: cierra la venta con su precio y fecha"
+                  >
+                    <CircleDollarSign className="w-3.5 h-3.5" /> Vendido
                   </Boton>
                 )}
               </div>
@@ -327,6 +344,9 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
 
       {pestana === "papeles" && <Papeles ingreso={ingreso} catalogo={catalogo} esAdmin={esAdmin} onCambio={refrescar} />}
 
+      {/* Solo la consignación trae requisitos: compra y parte de pago no. */}
+      {pestana === "contrato" && ingreso.requisitosContrato && <PapelesObligatorios requisitos={ingreso.requisitosContrato} />}
+
       {pestana === "contrato" && contratoBloqueado && (
         <div className="rounded-xl border border-border bg-card p-4">
           <RequisitosContrato requisitos={ingreso.requisitosContrato} />
@@ -347,7 +367,14 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
                 <FileSignature className="w-3.5 h-3.5" /> {contrato ? "Editar condiciones" : "Cargar condiciones"}
               </Boton>
               {contrato && (
-                <Boton variante={firmado ? "peligro" : "primario"} tamano="sm" className="gap-1.5" onClick={alternarFirma} cargando={firmando}>
+                <Boton
+                  variante={firmado ? "peligro" : "primario"}
+                  tamano="sm"
+                  // Desfirmar es la acción que deshace el contrato: rojo siempre, no solo al pasar el mouse.
+                  className={cn("gap-1.5", firmado && "text-destructive border-destructive/50 hover:bg-destructive/10")}
+                  onClick={alternarFirma}
+                  cargando={firmando}
+                >
                   {firmado ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                   {firmado ? "Desfirmar" : "Firmar"}
                 </Boton>
@@ -369,6 +396,28 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
           contrato={contrato}
           onCerrar={() => setEditandoContrato(false)}
           onGuardado={refrescar}
+        />
+      )}
+
+      {vendiendo && (
+        <VenderModal
+          vehiculo={{ brand: vehiculo.marca, model: vehiculo.modelo, precio: contrato?.precioPublicacion }}
+          cargando={confirmandoVenta}
+          onCancelar={() => setVendiendo(false)}
+          onConfirmar={async (datos) => {
+            setConfirmandoVenta(true);
+            setError(null);
+            try {
+              await venderIngreso(ingreso.id, datos);
+              setVendiendo(false);
+              refrescar();
+            } catch (e) {
+              setError(e.message);
+              setVendiendo(false);
+            } finally {
+              setConfirmandoVenta(false);
+            }
+          }}
         />
       )}
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import { Overlay } from "../ui/overlay";
 import { VenderModal } from "./vender-modal";
+import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -30,6 +31,9 @@ const FORM_VACIO = {
   precio: "",
   costo: "",
   kms: "",
+  dominio: "",
+  motor: "",
+  chasis: "",
   stock: "1",
   condicion: "usado",
   tipoVehiculo: "auto",
@@ -153,6 +157,9 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       precio: String(v.precio || ""),
       costo: v.costo != null ? String(v.costo) : "",
       kms: String(v.kms || ""),
+      dominio: v.dominio || "",
+      motor: v.motor || "",
+      chasis: v.chasis || "",
       stock: String(v.stock ?? 1),
       condicion: v.condicion || "usado",
       tipoVehiculo: v.tipo || "auto",
@@ -251,6 +258,9 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       precio: Number(form.precio),
       costo: form.costo === "" ? null : Number(form.costo),
       kms: Number(form.kms) || 0,
+      dominio: form.dominio,
+      motor: form.motor,
+      chasis: form.chasis,
       stock: Number(form.stock),
       condicion: form.condicion,
       tipoVehiculo: form.tipoVehiculo,
@@ -346,10 +356,16 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
 
   // Insignia de consignación: el auto es de un tercero, no del stock propio.
   // Cambia qué se puede hacer con él, así que tiene que verse en la fila.
+  // `deConsignacion`: entró por Documentos → Consignación, aunque su
+  // consignación comercial se haya archivado.
   const insigniaConsignacion = (v) =>
-    v.consignacion ? (
+    v.consignacion || v.deConsignacion ? (
       <span
-        title={`En consignación de ${v.consignacion.duenio_nombre} · comisión ${v.consignacion.comision}%`}
+        title={
+          v.consignacion
+            ? `En consignación de ${v.consignacion.duenio_nombre} · comisión ${v.consignacion.comision}%`
+            : "Ingresó en consignación desde Documentos"
+        }
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border text-amber-500 border-amber-500/30 bg-amber-500/10"
       >
         <Handshake className="w-3 h-3" /> Consignación
@@ -633,7 +649,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <Campo label="Año *" tipo="number" valor={form.anio} onCambio={(v) => cambiar("anio", v)} placeholder="2020" />
-                <Campo label="Kms" tipo="number" valor={form.kms} onCambio={(v) => cambiar("kms", v)} placeholder="45000" />
+                <CampoNumero label="Kms" valor={form.kms} onCambio={(v) => cambiar("kms", v)} placeholder="45.000" />
                 <label className="block">
                   <span className="block text-xs font-medium text-muted-foreground mb-1.5">Condición</span>
                   <select
@@ -645,6 +661,12 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     <option value="0km">0 km</option>
                   </select>
                 </label>
+              </div>
+              {/* Identificación de la unidad: el boleto la usa cuando se vende con parte de pago. */}
+              <div className="grid grid-cols-3 gap-3">
+                <Campo label="Dominio" valor={form.dominio} onCambio={(v) => cambiar("dominio", v)} placeholder="AB123CD" />
+                <Campo label="Número de motor" valor={form.motor} onCambio={(v) => cambiar("motor", v)} />
+                <Campo label="Número de chasis" valor={form.chasis} onCambio={(v) => cambiar("chasis", v)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
@@ -673,15 +695,14 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Precio (ARS) *" tipo="number" valor={form.precio} onCambio={(v) => cambiar("precio", v)} placeholder="12500000" />
+                <CampoNumero label="Precio (ARS) *" valor={form.precio} onCambio={(v) => cambiar("precio", v)} placeholder="12.500.000" />
                 <Campo label="Stock (unidades)" tipo="number" valor={form.stock} onCambio={(v) => cambiar("stock", v)} placeholder="1" />
               </div>
               {/* Lo que PAGÓ la agencia. Es lo único que permite calcular la
                   ganancia neta; sin esto la venta suma facturación pero 0 de
                   ganancia. No se muestra en el sitio público. */}
-              <Campo
+              <CampoNumero
                 label="Costo de compra (ARS)"
-                tipo="number"
                 valor={form.costo}
                 onCambio={(v) => cambiar("costo", v)}
                 placeholder="Lo que pagaste por el vehículo"
@@ -791,6 +812,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <Dato label="Año">{detalle.year}</Dato>
                 <Dato label="Kms">{detalle.kms?.toLocaleString("es-AR")}</Dato>
+                {detalle.dominio && <Dato label="Dominio">{detalle.dominio}</Dato>}
                 <Dato label="Stock">{detalle.stock ?? 0} {detalle.stock === 1 ? "unidad" : "unidades"}</Dato>
                 <Dato label="Condición">{detalle.condicion === "0km" ? "0 km" : "Usado"}</Dato>
                 <Dato label="Tipo">{detalle.tipo === "moto" ? "Moto" : "Auto"}</Dato>
@@ -859,6 +881,11 @@ function Dato({ label, children }) {
       <p className="text-foreground">{children ?? "—"}</p>
     </div>
   );
+}
+
+// Precio o kilómetros: con puntos de miles al tipear; el formulario guarda los dígitos.
+function CampoNumero({ valor, onCambio, ...props }) {
+  return <Campo {...props} valor={conPuntosDeMiles(aDigitos(valor))} onCambio={(v) => onCambio(soloDigitos(v))} />;
 }
 
 function Campo({ label, valor, onCambio, placeholder, tipo = "text", autoFocus }) {

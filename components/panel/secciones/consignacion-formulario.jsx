@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
 import { Handshake, AlertCircle } from "lucide-react";
 import { crearConsignacion, actualizarConsignacion } from "@/lib/api";
 import { combinadorClases as cn } from "@/lib/utilidades";
@@ -141,10 +142,11 @@ export function FormularioConsignacion({ consignacion, vehiculos, onCerrar, onGu
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
                   <input
-                    type="number"
-                    value={form.precioPactado}
-                    onChange={(e) => campo("precioPactado")(e.target.value)}
-                    placeholder="8000000"
+                    type="text"
+                    inputMode="numeric"
+                    value={conPuntosDeMiles(aDigitos(form.precioPactado))}
+                    onChange={(e) => campo("precioPactado")(soloDigitos(e.target.value))}
+                    placeholder="8.000.000"
                     className={cn(CLASE_INPUT, "h-9 pl-7")}
                   />
                 </div>

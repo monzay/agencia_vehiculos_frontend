@@ -5,7 +5,7 @@ import { Handshake } from "lucide-react";
 import { crearIngreso, actualizarIngreso } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
-import { Texto, Area, Paso, Aviso } from "./campos";
+import { Numero, Area, Paso, Aviso } from "./campos";
 import { PersonaFormulario, aPersona } from "./persona-formulario";
 import { MODALIDAD } from "./modalidades";
 
@@ -71,7 +71,8 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
       const cuerpo = {
         kmRecepcion: recepcion.kmRecepcion === "" ? null : Number(recepcion.kmRecepcion),
         notas: recepcion.notas.trim() || null,
-        titular: sinVacios(titular),
+        // Al editar viaja entero: un campo vaciado tiene que llegar para borrarse.
+        titular: editando ? titular : sinVacios(titular),
       };
 
       if (editando) await actualizarIngreso(ingreso.id, cuerpo);
@@ -111,12 +112,11 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
           ayuda="Los datos del vehículo se toman del título del automotor, cuando se carga en Papeles."
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Texto
+            <Numero
               label="Kilómetros al recibirlo"
               valor={recepcion.kmRecepcion}
               onCambio={cambiarRecepcion("kmRecepcion")}
-              inputMode="numeric"
-              placeholder="87500"
+              placeholder="87.500"
               ayuda="Queda congelado en el recibo."
             />
           </div>

@@ -2,6 +2,7 @@
 
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { CLASE_INPUT } from "../../ui/campo";
+import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
 
 // Piezas de formulario compartidas por el alta del ingreso, los papeles y el
 // contrato. Todas hablan el mismo idioma: `valor` + `onCambio`.
@@ -29,6 +30,13 @@ export function Texto({ label, valor, onCambio, placeholder, tipo = "text", ayud
       />
     </Etiqueta>
   );
+}
+
+// Número entero que se ve con puntos de miles mientras se tipea (1.000.000),
+// pero que le devuelve al formulario solo los dígitos: se valida y se guarda
+// igual que antes, el formato es solo visual.
+export function Numero({ valor, onCambio, ...props }) {
+  return <Texto valor={conPuntosDeMiles(aDigitos(valor))} onCambio={(v) => onCambio(soloDigitos(v))} inputMode="numeric" {...props} />;
 }
 
 export function Area({ label, valor, onCambio, placeholder, filas = 3, ayuda, className, maximo }) {

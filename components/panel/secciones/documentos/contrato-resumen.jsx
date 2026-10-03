@@ -27,9 +27,10 @@ export function ListaResumen({ filas, textos = [] }) {
 // está y se lee completo en el contrato impreso.
 function resumenRetiro({ avisoDias, costo, condiciones }) {
   const partes = [];
-  if (avisoDias || costo) partes.push(`${avisoDias} días de aviso · ${pesos(costo)}`);
-  if (condiciones) partes.push("+ lo pactado por escrito");
-  return partes.join(" ") || "Sin condiciones";
+  if (avisoDias) partes.push(`${avisoDias === 1 ? "1 día" : `${avisoDias} días`} de aviso`);
+  if (costo) partes.push(pesos(costo));
+  if (condiciones) partes.push("lo pactado por escrito");
+  return partes.join(" · ") || "Sin condiciones";
 }
 
 export function ResumenContrato({ contrato }) {

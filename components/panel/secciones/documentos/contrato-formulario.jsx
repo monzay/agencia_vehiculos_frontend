@@ -5,7 +5,7 @@ import { FileSignature } from "lucide-react";
 import { guardarContratoIngreso } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
-import { Texto, Selector, Area, Alternador, Paso, Aviso } from "./campos";
+import { Texto, Numero, Selector, Area, Alternador, Paso, Aviso } from "./campos";
 
 // Las condiciones del contrato de consignación.
 //
@@ -119,7 +119,6 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
     if (!Number.isFinite(valor) || valor < 0) return setError("La comisión no es válida.");
     if (form.comisionTipo === "porcentaje" && valor > 100) return setError("La comisión no puede superar el 100 %.");
     if (form.comisionTipo === "monto" && valor > TOPE_MONTO) return setError(`La comisión no puede ser mayor a ${TOPE_TEXTO}.`);
-    if (Number(form.retiroCosto) > TOPE_MONTO) return setError(`El costo de retiro anticipado no puede ser mayor a ${TOPE_TEXTO}.`);
 
     setGuardando(true);
     setError(null);
@@ -166,14 +165,13 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
           primero
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Texto
+            <Numero
               label="Precio de publicación"
               valor={form.precioPublicacion}
               onCambio={set("precioPublicacion")}
-              inputMode="decimal"
-              placeholder="20000000"
+              placeholder="20.000.000"
             />
-            <Texto label="Precio mínimo autorizado" valor={form.precioMinimo} onCambio={set("precioMinimo")} inputMode="decimal" placeholder="18500000" />
+            <Numero label="Precio mínimo autorizado" valor={form.precioMinimo} onCambio={set("precioMinimo")} placeholder="18.500.000" />
             <Selector
               label="La comisión se pacta como"
               valor={form.comisionTipo}
@@ -188,15 +186,6 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
               valor={form.comisionValor}
               onCambio={set("comisionValor")}
               inputMode="decimal"
-            />
-            <Alternador
-              label="¿De dónde sale la comisión?"
-              valor={form.comisionIncluida}
-              onCambio={set("comisionIncluida")}
-              opciones={[
-                { valor: true, label: "Del precio" },
-                { valor: false, label: "Se suma" },
-              ]}
             />
           </div>
 
@@ -228,10 +217,12 @@ export function ContratoFormulario({ ingresoId, contrato, onCerrar, onGuardado }
         </Paso>
 
         <Paso n={2} titulo="Plazo y retiro anticipado" ayuda="Cuánto tiempo la agencia tiene la unidad, y qué pasa si el dueño se arrepiente.">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* El costo del retiro no tiene campo propio: se pacta por escrito en
+              "Qué se pacta si lo retira antes". Un contrato viejo que lo tenía
+              cargado lo conserva al editarse. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Texto label="Plazo (días)" valor={form.plazoDias} onCambio={set("plazoDias")} inputMode="numeric" />
             <Texto label="Aviso para retirarlo (días)" valor={form.retiroAvisoDias} onCambio={set("retiroAvisoDias")} inputMode="numeric" />
-            <Texto label="Costo del retiro ($)" valor={form.retiroCosto} onCambio={set("retiroCosto")} inputMode="decimal" ayuda="0 si no paga nada." />
           </div>
           <Area
             label="Qué se pacta si lo retira antes"

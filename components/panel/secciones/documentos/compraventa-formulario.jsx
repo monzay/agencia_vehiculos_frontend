@@ -5,7 +5,7 @@ import { FileSignature } from "lucide-react";
 import { guardarCompraventaIngreso, obtenerVehiculosAdmin } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
-import { Texto, Selector, Area, Alternador, Paso, Aviso } from "./campos";
+import { Texto, Numero, Selector, Area, Alternador, Paso, Aviso } from "./campos";
 import { pesos } from "./impresos/etiquetas";
 
 // Las condiciones del boleto de compraventa o del contrato de permuta.
@@ -41,9 +41,6 @@ function aLocal(iso) {
 const aFormulario = (c) => ({
   precio: c ? String(c.precio) : "",
   autoEntregadoRef: c?.permuta?.ref ?? "",
-  entregadoDominio: c?.permuta?.dominio ?? "",
-  entregadoMotor: c?.permuta?.motor ?? "",
-  entregadoChasis: c?.permuta?.chasis ?? "",
   entregadoValor: c?.permuta ? String(c.permuta.valor) : "",
   formaPago: c?.pago.forma ?? "transferencia",
   pagoEnActo: c ? String(c.pago.enActo) : "",
@@ -98,6 +95,13 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
 
   const set = (campo) => (valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
+  // Al elegir el auto, el precio de venta arranca en su precio de lista.
+  const elegirAuto = (ref) => {
+    const auto = stock.find((a) => a.ref === ref);
+    setForm((f) => ({ ...f, autoEntregadoRef: ref, entregadoValor: auto ? String(auto.precio) : f.entregadoValor }));
+  };
+  const elegido = stock.find((a) => a.ref === form.autoEntregadoRef);
+
   const precio = Number(form.precio);
   const valorEntregado = esPermuta ? Number(form.entregadoValor) : null;
   const montosListos = precio > 0 && (!esPermuta || valorEntregado > 0);
@@ -117,7 +121,6 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
     if (precio > TOPE_MONTO) return "El valor del vehículo supera el máximo que admite el sistema.";
     if (esPermuta) {
       if (!form.autoEntregadoRef) return "Elegí el vehículo que vende la agencia.";
-      if (!form.entregadoDominio.trim()) return "Falta el dominio del vehículo que vende la agencia.";
       if (!(valorEntregado > 0)) return "Falta el precio de venta del vehículo de la agencia.";
       if (valorEntregado > TOPE_MONTO) return "El valor del vehículo de la agencia supera el máximo que admite el sistema.";
     }
@@ -141,9 +144,6 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
         precio,
         ...(esPermuta && {
           autoEntregadoRef: form.autoEntregadoRef,
-          entregadoDominio: form.entregadoDominio,
-          entregadoMotor: form.entregadoMotor,
-          entregadoChasis: form.entregadoChasis,
           entregadoValor: valorEntregado,
         }),
         formaPago: form.formaPago,
@@ -172,6 +172,7 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
     <Modal titulo={esPermuta ? "Boleto de compraventa con parte de pago" : "Boleto de compraventa"} icono={FileSignature} onCerrar={onCerrar} ancho="max-w-3xl">
       <div className="px-6 py-5 space-y-5 overflow-y-auto">
         {error && <Aviso>{error}</Aviso>}
+        <p className="text-xs text-muted-foreground">Los campos con * son obligatorios.</p>
 
         <Paso
           n={paso()}
@@ -180,26 +181,34 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
           primero
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Texto label="Valor ($)" valor={form.precio} onCambio={set("precio")} inputMode="decimal" placeholder="15000000" />
+            <Numero label="Valor ($) *" valor={form.precio} onCambio={set("precio")} placeholder="15.000.000" />
           </div>
         </Paso>
 
         {esPermuta && (
-          <Paso n={paso()} titulo="Vehículo que vende la agencia" ayuda="Sale del stock a la venta. Dominio, motor y chasis se copian de su título.">
+          <Paso
+            n={paso()}
+            titulo="Vehículo que vende la agencia"
+            ayuda="Sale del stock a la venta. Dominio, motor y chasis se toman de su ficha en Vehículos."
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Selector
-                label="Vehículo"
+                label="Vehículo *"
                 valor={form.autoEntregadoRef}
-                onCambio={set("autoEntregadoRef")}
+                onCambio={elegirAuto}
                 opciones={opcionesStock}
                 vacio="Elegí un vehículo…"
-                className="sm:col-span-2"
               />
-              <Texto label="Dominio" valor={form.entregadoDominio} onCambio={set("entregadoDominio")} placeholder="AB123CD" />
-              <Texto label="Precio de venta ($)" valor={form.entregadoValor} onCambio={set("entregadoValor")} inputMode="decimal" />
-              <Texto label="Número de motor" valor={form.entregadoMotor} onCambio={set("entregadoMotor")} />
-              <Texto label="Número de chasis" valor={form.entregadoChasis} onCambio={set("entregadoChasis")} />
+              <Numero
+                label="Precio de venta ($) *"
+                valor={form.entregadoValor}
+                onCambio={set("entregadoValor")}
+                ayuda="Se completa con el precio del auto; se puede ajustar."
+              />
             </div>
+            {elegido && !elegido.dominio && (
+              <Aviso tono="alerta">Este vehículo no tiene dominio cargado. Completalo en Vehículos → Editar antes de guardar el boleto.</Aviso>
+            )}
           </Paso>
         )}
 
@@ -228,7 +237,7 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
               />
               {haySaldo && (
                 <Texto
-                  label={`Saldo de ${pesos(pago.monto - enActo)} el día`}
+                  label={`Saldo de ${pesos(pago.monto - enActo)} el día *`}
                   tipo="date"
                   valor={form.saldoFecha}
                   onCambio={set("saldoFecha")}
@@ -244,9 +253,9 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
           ayuda="Desde la hora de entrega la unidad queda bajo responsabilidad de la agencia; desde ahí corre el plazo para transferir."
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Texto label="Fecha y hora de entrega" tipo="datetime-local" valor={form.entrega} onCambio={set("entrega")} />
+            <Texto label="Fecha y hora de entrega *" tipo="datetime-local" valor={form.entrega} onCambio={set("entrega")} />
             <Texto
-              label="Plazo para transferir (días)"
+              label="Plazo para transferir (días) *"
               valor={form.transferenciaDias}
               onCambio={set("transferenciaDias")}
               inputMode="numeric"

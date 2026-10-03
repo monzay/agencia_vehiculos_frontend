@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CircleDollarSign } from "lucide-react";
 import { Modal, ModalPie } from "../ui/modal";
 import { Boton } from "../ui/boton";
-import { Campo } from "../ui/campo";
+import { Campo, CampoNumero } from "../ui/campo";
 
 // Cierre de la venta de un auto propio.
 //
@@ -28,9 +28,8 @@ export function VenderModal({ vehiculo, cargando, onConfirmar, onCancelar }) {
       ancho="max-w-sm"
     >
       <div className="px-6 py-5 space-y-4">
-        <Campo
+        <CampoNumero
           label="Precio de venta (ARS)"
-          tipo="number"
           valor={precio}
           onCambio={setPrecio}
           placeholder="A cuánto se cerró"

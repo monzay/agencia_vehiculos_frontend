@@ -79,6 +79,22 @@ export const pesosConLetras = (monto) =>
   `$ ${Number(monto).toLocaleString("es-AR", { maximumFractionDigits: 2 })} (${montoEnLetras(monto)})`;
 
 export const FORMAS = { transferencia: "transferencia bancaria", efectivo: "efectivo", cheque: "cheque" };
+
+// Adónde se transfiere: el CBU, el alias o los dos, lo que el titular haya dado,
+// y de qué banco o billetera es la cuenta si se cargó.
+function cuenta({ cbu, aliasCbu }) {
+  if (cbu && aliasCbu) return `a la cuenta CBU ${cbu} (alias ${aliasCbu})`;
+  if (cbu) return `a la cuenta CBU ${cbu}`;
+  if (aliasCbu) return `a la cuenta con alias ${aliasCbu}`;
+  return null;
+}
+
+export function cuentaDestino(titular) {
+  const destino = cuenta(titular ?? {});
+  if (!destino) return "";
+  return titular.bancoCbu ? ` ${destino} de ${titular.bancoCbu}` : ` ${destino}`;
+}
+
 // Qué dejó el cliente de cada papel. Snapshots viejos pueden no traerlo.
 export const TENENCIA = { original: "Original", copia: "Fotocopia" };
 export const originales = (papeles) => papeles.filter((p) => p.tenencia === "original");

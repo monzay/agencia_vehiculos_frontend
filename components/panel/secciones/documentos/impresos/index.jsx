@@ -21,17 +21,17 @@ import { CompromisoTransferencia } from "./compromiso-transferencia";
 
 // La marca de agua es solo del contrato: los recibos son constancias de lo que
 // el cliente entregó y se firman limpias.
-const RECIBOS = [
-  { clave: "recibo-documentacion", render: (d) => <ReciboDocumentacion datos={d} /> },
-  { clave: "recibo-recepcion", render: (d) => <ReciboRecepcion datos={d} /> },
-];
+const RECIBO_DOCUMENTACION = { clave: "recibo-documentacion", render: (d) => <ReciboDocumentacion datos={d} /> };
+const RECIBO_RECEPCION = { clave: "recibo-recepcion", render: (d) => <ReciboRecepcion datos={d} /> };
 
+// Sin recibo de recepción: la fecha, quién recibió la unidad y su estado ya van
+// en la cláusula 7 del contrato, que sale por duplicado.
 const CONSIGNACION = {
   cargar: obtenerImpresosIngreso,
   hojas: [
     { clave: "contrato-cliente", render: (d, marca) => <Contrato datos={d} copia="original para el cliente" marcaAgua={marca} /> },
     { clave: "contrato-agencia", render: (d, marca) => <Contrato datos={d} copia="duplicado para la agencia" marcaAgua={marca} /> },
-    ...RECIBOS,
+    RECIBO_DOCUMENTACION,
   ],
 };
 
@@ -42,7 +42,8 @@ const COMPRAVENTA = {
   hojas: [
     { clave: "boleto-cliente", render: (d, marca) => <Boleto datos={d} copia="original para el cliente" marcaAgua={marca} /> },
     { clave: "boleto-agencia", render: (d, marca) => <Boleto datos={d} copia="duplicado para la agencia" marcaAgua={marca} /> },
-    ...RECIBOS,
+    RECIBO_DOCUMENTACION,
+    RECIBO_RECEPCION,
     { clave: "compromiso-transferencia", render: (d) => <CompromisoTransferencia datos={d} /> },
   ],
 };

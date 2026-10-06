@@ -25,6 +25,7 @@ export const PERSONA_VACIA = {
   provincia: "",
   cbu: "",
   aliasCbu: "",
+  bancoCbu: "",
   contactoAltTelefono: "",
   contactoAltVinculo: "",
 };
@@ -43,6 +44,7 @@ export const aPersona = (p) =>
         provincia: p.provincia ?? "",
         cbu: p.cbu ?? "",
         aliasCbu: p.aliasCbu ?? "",
+        bancoCbu: p.bancoCbu ?? "",
         contactoAltTelefono: p.contactoAlternativo?.telefono ?? "",
         contactoAltVinculo: p.contactoAlternativo?.vinculo ?? "",
       }
@@ -151,6 +153,16 @@ export function PersonaFormulario({ persona, onCambio }) {
           ayuda="Acá se le transfiere cuando el auto se venda."
         />
         <Texto label="Alias" valor={persona.aliasCbu} onCambio={set("aliasCbu")} placeholder="mi.alias.banco" />
+        {(persona.cbu.trim() || persona.aliasCbu.trim()) && (
+          <Texto
+            label="Banco o billetera"
+            valor={persona.bancoCbu}
+            onCambio={set("bancoCbu")}
+            placeholder="Banco Nación, Mercado Pago…"
+            ayuda="De qué banco o medio de pago es la cuenta."
+            className="sm:col-span-2"
+          />
+        )}
       </div>
 
       {/* Alguien cercano a quien llamar si el titular no atiende */}

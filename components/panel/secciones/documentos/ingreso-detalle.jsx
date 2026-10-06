@@ -26,11 +26,11 @@ import { Aviso } from "./campos";
 import { Papeles } from "./papeles";
 import { Impresos } from "./impresos";
 import { RequisitosContrato, PapelesObligatorios } from "./requisitos-contrato";
-import { PublicarModal } from "./publicar-modal";
-import { VINCULO } from "./vinculos";
+import { PublicarModal } from "./publicar-modal";import { VINCULO } from "./vinculos";
 import { CONTRATOS } from "./contratos";
 import { MODALIDAD } from "./modalidades";
 import { tituloVehiculo, tieneVehiculo, dni, cuit, fechaDeMomento } from "./formato";
+import { pesos } from "./impresos/etiquetas";
 
 // Legajo de un ingreso: el vehículo, quién lo dejó, los papeles y el contrato.
 
@@ -60,7 +60,7 @@ const FILAS = [
     valor: (p) => p.contactoAlternativo && `${p.contactoAlternativo.telefono} · ${VINCULO[p.contactoAlternativo.vinculo]}`,
   },
   // Adónde se le paga al titular: el CBU y su alias, lo que haya.
-  { label: "CBU / Alias", valor: (p) => [p.cbu, p.aliasCbu].filter(Boolean).join(" · ") || null },
+  { label: "CBU / Alias", valor: (p) => [p.cbu, p.aliasCbu, p.bancoCbu].filter(Boolean).join(" · ") || null },
 ];
 
 // Los datos del titular, rótulo a la izquierda y valor a la derecha. Una sola
@@ -84,13 +84,15 @@ function Titular({ persona }) {
   );
 }
 
-// Cuándo se creó el ingreso y cuándo entró al estado actual, al lado del
-// titular y con el mismo formato de filas. "En recepción" no lleva fecha
-// propia: es el estado inicial.
+// Cuándo se creó el ingreso, cuándo se publicó y cuándo entró al estado actual,
+// al lado del titular y con el mismo formato de filas. "En recepción" no lleva
+// fecha propia: es el estado inicial. La publicación se muestra aunque después
+// se haya vendido o retirado.
 function Fechas({ ingreso }) {
   const filas = [
     { label: "Creado", valor: fechaDeMomento(ingreso.creado) },
-    ...(ingreso.estado !== "recepcion"
+    ...(ingreso.publicado ? [{ label: ESTADOS.publicado.label, valor: fechaDeMomento(ingreso.publicado) }] : []),
+    ...(!["recepcion", "publicado"].includes(ingreso.estado)
       ? [{ label: ESTADOS[ingreso.estado]?.label ?? ingreso.estado, valor: fechaDeMomento(ingreso.estadoDesde) }]
       : []),
   ];
@@ -107,7 +109,29 @@ function Fechas({ ingreso }) {
   );
 }
 
-export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEditar, onCambio }) {
+// Lo que el cliente deja en la parte de pago, con el mismo formato de filas.
+function ParteDePago({ datos }) {
+  const filas = [
+    { label: "Vehículo que deja", valor: datos.vehiculo || "No entrega vehículo" },
+    { label: "Valor de toma", valor: datos.valor != null ? pesos(datos.valor) : null },
+    { label: "Tiene para entregar", valor: datos.efectivo != null ? pesos(datos.efectivo) : null },
+  ];
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Parte de pago</p>
+      {filas.map(({ label, valor }) => (
+        <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-x-4 py-1 border-t border-border">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          <span className="text-xs text-foreground tabular-nums">{valor || <span className="text-muted-foreground">—</span>}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// `version` cambia cuando el ingreso se edita afuera (el modal de Editar
+// ingreso): sin recargar, el detalle y el próximo Editar mostrarían datos viejos.
+export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio }) {
   const [ingreso, setIngreso] = useState(null);
   const [error, setError] = useState(null);
   const [pestana, setPestana] = useState("papeles");
@@ -129,7 +153,7 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
 
   useEffect(() => {
     cargar();
-  }, [cargar]);
+  }, [cargar, version]);
 
   // Refresca el legajo y avisa a la lista, que muestra contadores de papeles.
   const refrescar = () => {
@@ -315,6 +339,7 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 pt-3 border-t border-border">
           <Titular persona={ingreso.titular} />
           <Fechas ingreso={ingreso} />
+          {ingreso.parteDePago && <ParteDePago datos={ingreso.parteDePago} />}
         </div>
       </div>
 
@@ -392,6 +417,7 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
       {editandoContrato && (
         <Formulario
           ingresoId={ingreso.id}
+          ingreso={ingreso}
           modalidad={ingreso.modalidad}
           contrato={contrato}
           onCerrar={() => setEditandoContrato(false)}
@@ -401,8 +427,7 @@ export function IngresoDetalle({ ingresoId, catalogo, esAdmin, onVolver, onEdita
 
       {vendiendo && (
         <VenderModal
-          vehiculo={{ brand: vehiculo.marca, model: vehiculo.modelo, precio: contrato?.precioPublicacion }}
-          cargando={confirmandoVenta}
+          vehiculo={{ brand: vehiculo.marca, model: vehiculo.modelo, precio: contrato?.precioPublicacion }}          cargando={confirmandoVenta}
           onCancelar={() => setVendiendo(false)}
           onConfirmar={async (datos) => {
             setConfirmandoVenta(true);

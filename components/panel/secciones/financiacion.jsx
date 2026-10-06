@@ -14,7 +14,7 @@ import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
 import { Boton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
 import { Modal, ModalPie } from "../ui/modal";
-import { Campo, CLASE_INPUT } from "../ui/campo";
+import { Campo, CampoNumero, CLASE_INPUT } from "../ui/campo";
 import { Insignia } from "../ui/insignia";
 import { ConfirmarModal } from "../ui/confirmar-modal";
 
@@ -406,12 +406,11 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
                 onCambio={(v) => cambiar("cantidadCuotas", v)}
                 placeholder="12"
               />
-              <Campo
+              <CampoNumero
                 label="Precio por cuota *"
-                tipo="number"
                 valor={form.precioCuota}
                 onCambio={(v) => cambiar("precioCuota", v)}
-                placeholder="85000"
+                placeholder="85.000"
               />
               <label className="block">
                 <span className="block text-xs font-medium text-muted-foreground mb-1.5">Día de pago *</span>

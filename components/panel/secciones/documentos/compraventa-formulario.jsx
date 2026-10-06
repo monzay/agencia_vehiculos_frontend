@@ -38,17 +38,23 @@ function aLocal(iso) {
   return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}`;
 }
 
-const aFormulario = (c) => ({
+const aTexto = (n) => (n != null ? String(n) : "");
+
+// Un boleto nuevo arranca con lo que ya se cargó al crear el trámite: lo que
+// el cliente tiene para entregar y el estado en que se recibió la unidad. Un
+// boleto ya guardado conserva sus propios valores. El valor del usado de la
+// parte de pago no se carga acá: es siempre el valor de toma del trámite.
+const aFormulario = (c, ingreso) => ({
   precio: c ? String(c.precio) : "",
   autoEntregadoRef: c?.permuta?.ref ?? "",
   entregadoValor: c?.permuta ? String(c.permuta.valor) : "",
   formaPago: c?.pago.forma ?? "transferencia",
-  pagoEnActo: c ? String(c.pago.enActo) : "",
+  pagoEnActo: c ? String(c.pago.enActo) : aTexto(ingreso?.parteDePago?.efectivo),
   saldoFecha: c?.pago.saldoFecha ?? "",
   entrega: aLocal(c?.entrega),
   transferenciaDias: c ? String(c.transferencia.dias) : "30",
   gastosTransferencia: c?.transferencia.gastosACargo ?? "agencia",
-  estadoUnidad: c?.estadoUnidad ?? "",
+  estadoUnidad: c ? c.estadoUnidad ?? "" : ingreso?.notas ?? "",
   condiciones: c?.condiciones ?? "",
   jurisdiccion: c?.jurisdiccion ?? "",
 });
@@ -70,6 +76,30 @@ const QUIEN_PAGA_SALDO = {
   cliente: "Saldo de precio a pagar por el cliente:",
 };
 
+// La cuenta de la parte de pago renglón por renglón: el auto de la agencia,
+// menos el usado, menos lo que el cliente entrega en el acto, da lo que queda.
+function DesgloseParteDePago({ precioAuto, valorUsado, enActo }) {
+  const filas = [
+    ["Precio del auto de la agencia", pesos(precioAuto)],
+    ["− Usado que entrega el cliente", pesos(valorUsado)],
+    ["− Tiene para entregar en el acto", pesos(enActo)],
+  ];
+  return (
+    <div className="rounded-lg border border-border text-sm">
+      {filas.map(([label, valor]) => (
+        <div key={label} className="flex justify-between gap-4 px-3 py-1.5 border-b border-border">
+          <span className="text-muted-foreground">{label}</span>
+          <span className="tabular-nums text-foreground">{valor}</span>
+        </div>
+      ))}
+      <div className="flex justify-between gap-4 px-3 py-1.5 font-medium">
+        <span className="text-foreground">Queda pendiente de pago</span>
+        <span className="tabular-nums text-foreground">{pesos(precioAuto - valorUsado - enActo)}</span>
+      </div>
+    </div>
+  );
+}
+
 // Los autos de la agencia que se pueden dar en permuta: los que están a la venta.
 function useStockPropio(activo) {
   const [stock, setStock] = useState([]);
@@ -86,9 +116,9 @@ function useStockPropio(activo) {
   return stock;
 }
 
-export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar, onGuardado }) {
+export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato, onCerrar, onGuardado }) {
   const esPermuta = modalidad === "permuta";
-  const [form, setForm] = useState(() => aFormulario(contrato));
+  const [form, setForm] = useState(() => aFormulario(contrato, ingreso));
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const stock = useStockPropio(esPermuta);
@@ -102,7 +132,8 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
   };
   const elegido = stock.find((a) => a.ref === form.autoEntregadoRef);
 
-  const precio = Number(form.precio);
+  // En la parte de pago el valor del usado sale del trámite, igual que en el backend.
+  const precio = esPermuta ? Number(ingreso?.parteDePago?.valor ?? 0) : Number(form.precio);
   const valorEntregado = esPermuta ? Number(form.entregadoValor) : null;
   const montosListos = precio > 0 && (!esPermuta || valorEntregado > 0);
   const pago = montosListos ? aPagar(precio, valorEntregado) : null;
@@ -117,7 +148,9 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
   }
 
   function validar() {
-    if (!(precio > 0)) return esPermuta ? "El valor del usado es obligatorio." : "El valor del vehículo del cliente es obligatorio.";
+    if (!(precio > 0)) {
+      return esPermuta ? "Falta el valor de toma del usado: cargalo en Editar ingreso." : "El valor del vehículo del cliente es obligatorio.";
+    }
     if (precio > TOPE_MONTO) return "El valor del vehículo supera el máximo que admite el sistema.";
     if (esPermuta) {
       if (!form.autoEntregadoRef) return "Elegí el vehículo que vende la agencia.";
@@ -172,24 +205,26 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
     <Modal titulo={esPermuta ? "Boleto de compraventa con parte de pago" : "Boleto de compraventa"} icono={FileSignature} onCerrar={onCerrar} ancho="max-w-3xl">
       <div className="px-6 py-5 space-y-5 overflow-y-auto">
         {error && <Aviso>{error}</Aviso>}
+        {esPermuta && !(precio > 0) && (
+          <Aviso tono="alerta">El trámite no tiene cargado el valor de toma del usado. Cargalo en Editar ingreso antes de guardar el boleto.</Aviso>
+        )}
         <p className="text-xs text-muted-foreground">Los campos con * son obligatorios.</p>
 
-        <Paso
-          n={paso()}
-          titulo={esPermuta ? "Usado que entrega el cliente" : "Valor del vehículo del cliente"}
-          ayuda={esPermuta ? "Lo que se le toma a cuenta del precio del auto que compra." : "Lo que la agencia reconoce por la unidad que recibe."}
-          primero
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Numero label="Valor ($) *" valor={form.precio} onCambio={set("precio")} placeholder="15.000.000" />
-          </div>
-        </Paso>
+        {/* En la parte de pago el valor del usado no se pide: es el valor de toma del trámite. */}
+        {!esPermuta && (
+          <Paso n={paso()} titulo="Valor del vehículo del cliente" ayuda="Lo que la agencia reconoce por la unidad que recibe." primero>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Numero label="Valor ($) *" valor={form.precio} onCambio={set("precio")} placeholder="15.000.000" />
+            </div>
+          </Paso>
+        )}
 
         {esPermuta && (
           <Paso
             n={paso()}
             titulo="Vehículo que vende la agencia"
             ayuda="Sale del stock a la venta. Dominio, motor y chasis se toman de su ficha en Vehículos."
+            primero
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Selector
@@ -212,7 +247,11 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
           </Paso>
         )}
 
-        <Paso n={paso()} titulo="Pago" ayuda={esPermuta ? "El precio del auto menos el valor del usado." : "Lo que la agencia le paga al vendedor."}>
+        <Paso
+          n={paso()}
+          titulo="Pago"
+          ayuda={esPermuta ? "El precio del auto menos el usado y lo que el cliente tiene para entregar." : "Lo que la agencia le paga al vendedor."}
+        >
           {pago && (
             <p className="text-sm text-foreground">
               {pago.pagador ? (
@@ -224,11 +263,14 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
               )}
             </p>
           )}
+          {esPermuta && pago?.pagador === "cliente" && Number.isFinite(enActo) && (
+            <DesgloseParteDePago precioAuto={valorEntregado} valorUsado={precio} enActo={enActo} />
+          )}
           {pago?.pagador && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Selector label="Forma de pago" valor={form.formaPago} onCambio={set("formaPago")} opciones={FORMAS_PAGO} />
               <Texto
-                label="Se paga en el acto ($)"
+                label={esPermuta && pago.pagador === "cliente" ? "Tiene para entregar en el acto ($)" : "Se paga en el acto ($)"}
                 valor={form.pagoEnActo}
                 onCambio={set("pagoEnActo")}
                 inputMode="decimal"
@@ -272,7 +314,7 @@ export function CompraventaFormulario({ ingresoId, modalidad, contrato, onCerrar
             onCambio={set("estadoUnidad")}
             maximo={TOPE_LIBRE}
             placeholder="Chapa, faltantes, cubiertas, rueda de auxilio…"
-            ayuda="Los kilómetros salen del ingreso; acá va todo lo demás."
+            ayuda="Arranca con el estado cargado al crear el trámite. Los kilómetros salen del ingreso."
           />
           <Area
             label="Condiciones particulares"

@@ -1,6 +1,6 @@
 import { dni, cuit } from "../formato";
 import { Hoja, Encabezado, Bloque, Clausula, Clausulas, Firmas, MarcaAgua } from "./hoja";
-import { A_CARGO, FORMAS, apocopar, enLetras, kilometros, nombreCompleto, originales, pesos } from "./etiquetas";
+import { A_CARGO, FORMAS, apocopar, cuentaDestino, enLetras, fecha, kilometros, nombreCompleto, originales, pesos } from "./etiquetas";
 
 // El contrato de consignación, por duplicado: el original del cliente y el
 // duplicado de la agencia son el mismo documento, así que son el mismo
@@ -74,6 +74,13 @@ function textoRetiro({ avisoDias, costo, condiciones }) {
     ? ` En caso de retirarlo antes del vencimiento del plazo, el titular se compromete a lo siguiente: ${conPunto(condiciones)}`
     : "";
   return `El titular puede retirar el vehículo antes del vencimiento del plazo${aviso}${pago}.${pactado}`;
+}
+
+// Cláusula 7. Reemplaza al recibo de recepción, que en la consignación ya no se
+// imprime: cuándo entró la unidad.
+function textoRecepcion(recepcion) {
+  const cuando = recepcion?.recibido ? ` el ${fecha(recepcion.recibido)}` : "";
+  return `La agencia recibió la unidad${cuando},`;
 }
 
 // El bloque del vehículo recibido: el del ingreso, con los km con que entró.
@@ -158,9 +165,10 @@ export function Contrato({ datos, copia, marcaAgua }) {
           <Clausula n={6} titulo="Retiro anticipado">
             {textoRetiro(c.retiroAnticipado)}
           </Clausula>
-          <Clausula n={7} titulo="Estado de la unidad">
-            Recibida con {kilometros(datos.vehiculo.kmRecepcion) ?? "—"} km.{" "}
-            {c.estadoUnidad || "Sin observaciones adicionales al momento de la recepción."}
+          <Clausula n={7} titulo="Recepción y estado de la unidad">
+            {textoRecepcion(datos.recepcion)} con {kilometros(datos.vehiculo.kmRecepcion) ?? "—"} km.{" "}
+            {c.estadoUnidad || "Sin observaciones adicionales al momento de la recepción."} Las fotos del peritaje quedan archivadas
+            en el legajo digital de este ingreso.
           </Clausula>
           <Clausula n={8} titulo="Pruebas de manejo">
             {c.pruebaManejo.permitida
@@ -175,7 +183,7 @@ export function Contrato({ datos, copia, marcaAgua }) {
           <Clausula n={10} titulo="Liquidación">
             Concretada la venta y acreditado efectivamente el pago del precio, la agencia procederá a liquidar al titular,{" "}
             <strong>{plazoLiquidacion(c.liquidacion.dias)}</strong>, por {FORMAS[c.liquidacion.forma]}
-            {datos.titular?.cbu ? ` a la cuenta CBU ${datos.titular.cbu}` : ""}.
+            {cuentaDestino(datos.titular)}.
           </Clausula>
           <Clausula n={11} titulo="Documentación entregada">
             {originales(datos.papelesEntregados).length

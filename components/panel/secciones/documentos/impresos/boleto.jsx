@@ -1,6 +1,6 @@
 import { Hoja, Encabezado, Clausula, Clausulas, Firmas, MarcaAgua } from "./hoja";
 import { Partes } from "./contrato";
-import { DE_QUIEN, FORMAS, fecha, fechaLarga, hora, kilometros, originales, pesosConLetras } from "./etiquetas";
+import { DE_QUIEN, FORMAS, cuentaDestino, fecha, fechaLarga, hora, kilometros, originales, pesosConLetras } from "./etiquetas";
 import { fechaSinHora } from "../formato";
 
 // El boleto de compraventa de automotor, por duplicado: original para el
@@ -32,7 +32,7 @@ const estadoDe = (c) => (c.estadoUnidad ? `Estado: ${c.estadoUnidad.replace(/\.?
 // del pago en el acto es el propio boleto: por eso lo dice.
 function pagos(pago, quien, titular) {
   const medio = FORMAS[pago.forma];
-  const cuenta = pago.pagador === "agencia" && pago.forma === "transferencia" && titular?.cbu ? ` a la cuenta CBU ${titular.cbu}` : "";
+  const cuenta = pago.pagador === "agencia" && pago.forma === "transferencia" ? cuentaDestino(titular) : "";
 
   const partes = [];
   if (pago.enActo > 0) {

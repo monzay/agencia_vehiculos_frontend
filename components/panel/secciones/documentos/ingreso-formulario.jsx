@@ -5,7 +5,7 @@ import { Handshake } from "lucide-react";
 import { crearIngreso, actualizarIngreso } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
-import { Numero, Area, Paso, Aviso } from "./campos";
+import { Texto, Numero, Area, Paso, Aviso } from "./campos";
 import { PersonaFormulario, aPersona } from "./persona-formulario";
 import { MODALIDAD } from "./modalidades";
 
@@ -14,17 +14,27 @@ import { MODALIDAD } from "./modalidades";
 // Los datos del vehículo (dominio, marca, modelo, año, motor, chasis, origen)
 // no se piden acá: salen del título del automotor cuando se carga ese papel.
 // Lo único del auto que se pide es lo que no figura en ningún papel: los km del
-// tablero al recibirlo y las notas.
+// tablero al recibirlo y el estado en que se recibió (columna `notas`).
 
-const RECEPCION_VACIA = { kmRecepcion: "", notas: "" };
+const RECEPCION_VACIA = { kmRecepcion: "", notas: "", parteDePagoVehiculo: "", parteDePagoValor: "", parteDePagoEfectivo: "" };
+
+const aTexto = (n) => (n != null ? String(n) : "");
+const aMonto = (v) => (v === "" ? null : Number(v));
 
 const aRecepcion = (i) =>
   i
     ? {
-        kmRecepcion: i.vehiculo.kmRecepcion != null ? String(i.vehiculo.kmRecepcion) : "",
+        kmRecepcion: aTexto(i.vehiculo.kmRecepcion),
         notas: i.notas ?? "",
+        parteDePagoVehiculo: i.parteDePago?.vehiculo ?? "",
+        parteDePagoValor: aTexto(i.parteDePago?.valor),
+        parteDePagoEfectivo: aTexto(i.parteDePago?.efectivo),
       }
     : { ...RECEPCION_VACIA };
+
+// Mismos topes que el backend.
+const TOPE_VEHICULO = 150;
+const TOPE_MONTO = 9999999999.99;
 
 // Las mismas reglas que el backend, para avisar sin ir y volver.
 function validar(recepcion, titular) {
@@ -40,6 +50,9 @@ function validar(recepcion, titular) {
     const km = Number(recepcion.kmRecepcion);
     if (!Number.isInteger(km) || km < 0) return "Los kilómetros tienen que ser un número entero.";
   }
+
+  if (Number(recepcion.parteDePagoValor) > TOPE_MONTO) return "El valor de toma supera el máximo que admite el sistema.";
+  if (Number(recepcion.parteDePagoEfectivo) > TOPE_MONTO) return "Lo que tiene para entregar supera el máximo que admite el sistema.";
   return null;
 }
 
@@ -51,6 +64,7 @@ const sinVacios = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v])
 // se cambia.
 export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) {
   const editando = Boolean(ingreso);
+  const esParteDePago = (ingreso?.modalidad ?? modalidad) === "permuta";
 
   const [recepcion, setRecepcion] = useState(() => aRecepcion(ingreso));
   const [titular, setTitular] = useState(() => aPersona(ingreso?.titular));
@@ -71,6 +85,11 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
       const cuerpo = {
         kmRecepcion: recepcion.kmRecepcion === "" ? null : Number(recepcion.kmRecepcion),
         notas: recepcion.notas.trim() || null,
+        ...(esParteDePago && {
+          parteDePagoVehiculo: recepcion.parteDePagoVehiculo.trim() || null,
+          parteDePagoValor: aMonto(recepcion.parteDePagoValor),
+          parteDePagoEfectivo: aMonto(recepcion.parteDePagoEfectivo),
+        }),
         // Al editar viaja entero: un campo vaciado tiene que llegar para borrarse.
         titular: editando ? titular : sinVacios(titular),
       };
@@ -106,8 +125,41 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
           <PersonaFormulario persona={titular} onCambio={setTitular} />
         </Paso>
 
+        {esParteDePago && (
+          <Paso
+            n={2}
+            titulo="Parte de pago"
+            ayuda="Lo que deja el cliente para comprar el auto: el usado, en cuánto se lo toma y la plata que entrega además."
+          >
+            <Texto
+              label="Vehículo que deja"
+              valor={recepcion.parteDePagoVehiculo}
+              onCambio={cambiarRecepcion("parteDePagoVehiculo")}
+              placeholder="Volkswagen Gol Trend 1.6 Highline 2017"
+              maxLength={TOPE_VEHICULO}
+              ayuda="Nombre completo: marca, modelo, versión y año. Vacío = no entrega vehículo."
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Numero
+                label="Valor de toma ($)"
+                valor={recepcion.parteDePagoValor}
+                onCambio={cambiarRecepcion("parteDePagoValor")}
+                placeholder="12.000.000"
+                ayuda="En cuánto se toma el usado."
+              />
+              <Numero
+                label="Cuánto tiene para entregar ($)"
+                valor={recepcion.parteDePagoEfectivo}
+                onCambio={cambiarRecepcion("parteDePagoEfectivo")}
+                placeholder="2.000.000"
+                ayuda="Vacío = no entrega plata."
+              />
+            </div>
+          </Paso>
+        )}
+
         <Paso
-          n={2}
+          n={esParteDePago ? 3 : 2}
           titulo="Recepción"
           ayuda="Los datos del vehículo se toman del título del automotor, cuando se carga en Papeles."
         >
@@ -121,10 +173,11 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
             />
           </div>
           <Area
-            label="Notas"
+            label="Estado en el que se recibió la unidad"
             valor={recepcion.notas}
             onCambio={cambiarRecepcion("notas")}
-            placeholder="Faltantes, detalles de chapa, lo que convenga dejar escrito…"
+            placeholder="Faltantes, detalles de chapa, cubiertas, rueda de auxilio…"
+            ayuda="Se usa como estado de la unidad en el boleto."
           />
         </Paso>
       </div>

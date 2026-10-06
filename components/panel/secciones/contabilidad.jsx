@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Car, CircleDollarSign, TrendingUp, Wallet, PackageOpen, Loader2 } from "lucide-react";
+import { Car, CircleDollarSign, TrendingUp, Wallet, PackageOpen, Loader2, Construction } from "lucide-react";
 import { TarjetaMetrica } from "../tarjeta-metrica";
 import { obtenerContabilidad } from "@/lib/api";
 
@@ -33,7 +33,26 @@ function Variacion({ valor }) {
   );
 }
 
+// Mientras está en true, la sección no carga ni muestra datos: solo el aviso.
+const EN_DESARROLLO = true;
+
+// Ocupa todo el alto disponible: la pantalla menos el encabezado (h-16) y el
+// padding del <main> (p-4 / sm:p-6).
+function EnDesarrollo() {
+  return (
+    <div className="min-h-[calc(100dvh-6rem)] sm:min-h-[calc(100dvh-7rem)] flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card text-center px-6">
+      <Construction className="w-8 h-8 text-muted-foreground" />
+      <p className="text-base font-semibold text-foreground">En desarrollo</p>
+      <p className="text-sm text-muted-foreground">La sección de contabilidad todavía no está disponible.</p>
+    </div>
+  );
+}
+
 export function SeccionContabilidad() {
+  return EN_DESARROLLO ? <EnDesarrollo /> : <ContabilidadDatos />;
+}
+
+function ContabilidadDatos() {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
 

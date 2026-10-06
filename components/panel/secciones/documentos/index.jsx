@@ -237,6 +237,7 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
   const [editando, setEditando] = useState(null);
   const [error, setError] = useState(null);
   const [recarga, setRecarga] = useState(0);
+  const [ediciones, setEdiciones] = useState(0);
 
   // El catálogo define qué papel pide qué. Viene del backend para que el panel
   // no tenga una segunda copia que se desincronice.
@@ -285,6 +286,7 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
         abierto ? (
           <IngresoDetalle
             ingresoId={abierto}
+            version={ediciones}
             catalogo={catalogo}
             esAdmin={esAdmin}
             onVolver={() => setAbierto(null)}
@@ -300,7 +302,10 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
         <IngresoFormulario
           ingreso={editando}
           onCerrar={() => setEditando(null)}
-          onGuardado={() => setRecarga((n) => n + 1)}
+          onGuardado={() => {
+            setRecarga((n) => n + 1);
+            setEdiciones((n) => n + 1);
+          }}
         />
       )}
     </div>

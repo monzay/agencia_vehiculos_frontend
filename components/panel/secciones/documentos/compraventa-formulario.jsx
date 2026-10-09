@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FileSignature } from "lucide-react";
-import { guardarCompraventaIngreso, obtenerVehiculosAdmin } from "@/lib/api";
+import { guardarCompraventaIngreso } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
 import { Texto, Numero, Selector, Area, Alternador, Paso, Aviso } from "./campos";
 import { pesos } from "./impresos/etiquetas";
+import { vendeLaAgencia } from "./modalidades";
 
 // Las condiciones del boleto de compraventa o del contrato de permuta.
 //
@@ -43,11 +44,12 @@ const aTexto = (n) => (n != null ? String(n) : "");
 // Un boleto nuevo arranca con lo que ya se cargó al crear el trámite: lo que
 // el cliente tiene para entregar y el estado en que se recibió la unidad. Un
 // boleto ya guardado conserva sus propios valores. El valor del usado de la
-// parte de pago no se carga acá: es siempre el valor de toma del trámite.
+// parte de pago no se carga acá: es siempre el valor de toma del trámite. El
+// auto que se vende tampoco: se eligió al crear el trámite; el precio de venta
+// arranca en su precio de lista.
 const aFormulario = (c, ingreso) => ({
   precio: c ? String(c.precio) : "",
-  autoEntregadoRef: c?.permuta?.ref ?? "",
-  entregadoValor: c?.permuta ? String(c.permuta.valor) : "",
+  entregadoValor: c?.permuta ? String(c.permuta.valor) : aTexto(ingreso?.autoInteres?.precio),
   formaPago: c?.pago.forma ?? "transferencia",
   pagoEnActo: c ? String(c.pago.enActo) : aTexto(ingreso?.parteDePago?.efectivo),
   saldoFecha: c?.pago.saldoFecha ?? "",
@@ -60,10 +62,10 @@ const aFormulario = (c, ingreso) => ({
 });
 
 // Quién le paga a quién. Misma cuenta que hace el backend: en la parte de pago
-// el usado se descuenta del precio del auto y se paga solo el saldo.
-function aPagar(precio, valorEntregado) {
+// el usado y la seña se descuentan del precio del auto y se paga solo el saldo.
+function aPagar(precio, valorEntregado, sena = 0) {
   if (valorEntregado == null) return { pagador: "agencia", monto: precio };
-  const diferencia = precio - valorEntregado;
+  const diferencia = precio - valorEntregado + sena;
   if (diferencia === 0) return { pagador: null, monto: 0 };
   return diferencia > 0 ? { pagador: "agencia", monto: diferencia } : { pagador: "cliente", monto: -diferencia };
 }
@@ -76,12 +78,13 @@ const QUIEN_PAGA_SALDO = {
   cliente: "Saldo de precio a pagar por el cliente:",
 };
 
-// La cuenta de la parte de pago renglón por renglón: el auto de la agencia,
-// menos el usado, menos lo que el cliente entrega en el acto, da lo que queda.
-function DesgloseParteDePago({ precioAuto, valorUsado, enActo }) {
+// La cuenta de la venta renglón por renglón: el auto de la agencia, menos el
+// usado (si hay), la seña y lo que el cliente entrega en el acto, da lo que queda.
+function DesgloseParteDePago({ precioAuto, valorUsado, sena, enActo }) {
   const filas = [
     ["Precio del auto de la agencia", pesos(precioAuto)],
-    ["− Usado que entrega el cliente", pesos(valorUsado)],
+    ...(valorUsado > 0 ? [["− Usado que entrega el cliente", pesos(valorUsado)]] : []),
+    ...(sena > 0 ? [["− Seña ya pagada", pesos(sena)]] : []),
     ["− Tiene para entregar en el acto", pesos(enActo)],
   ];
   return (
@@ -94,66 +97,39 @@ function DesgloseParteDePago({ precioAuto, valorUsado, enActo }) {
       ))}
       <div className="flex justify-between gap-4 px-3 py-1.5 font-medium">
         <span className="text-foreground">Queda pendiente de pago</span>
-        <span className="tabular-nums text-foreground">{pesos(precioAuto - valorUsado - enActo)}</span>
+        <span className="tabular-nums text-foreground">{pesos(precioAuto - valorUsado - sena - enActo)}</span>
       </div>
     </div>
   );
 }
 
-// Los autos de la agencia que se pueden dar en permuta: los que están a la venta.
-function useStockPropio(activo) {
-  const [stock, setStock] = useState([]);
-  useEffect(() => {
-    if (!activo) return;
-    let vigente = true;
-    obtenerVehiculosAdmin("no")
-      .then((autos) => vigente && setStock(autos.filter((a) => !a.consignacion)))
-      .catch(() => vigente && setStock([]));
-    return () => {
-      vigente = false;
-    };
-  }, [activo]);
-  return stock;
-}
-
 export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato, onCerrar, onGuardado }) {
-  const esPermuta = modalidad === "permuta";
+  // La agencia vende un auto propio: parte de pago o venta al contado.
+  const esPermuta = vendeLaAgencia(modalidad);
+  const esParteDePago = modalidad === "permuta";
   const [form, setForm] = useState(() => aFormulario(contrato, ingreso));
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const stock = useStockPropio(esPermuta);
+  const sena = esPermuta ? ingreso?.sena ?? null : null;
+  // El auto que se vende es el que se eligió al crear el trámite.
+  const auto = esPermuta ? ingreso?.autoInteres ?? null : null;
 
   const set = (campo) => (valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
-  // Al elegir el auto, el precio de venta arranca en su precio de lista.
-  const elegirAuto = (ref) => {
-    const auto = stock.find((a) => a.ref === ref);
-    setForm((f) => ({ ...f, autoEntregadoRef: ref, entregadoValor: auto ? String(auto.precio) : f.entregadoValor }));
-  };
-  const elegido = stock.find((a) => a.ref === form.autoEntregadoRef);
-
-  // En la parte de pago el valor del usado sale del trámite, igual que en el backend.
+  // Cuando vende la agencia, el valor del usado sale del trámite (0 si no hay
+  // usado), igual que en el backend.
   const precio = esPermuta ? Number(ingreso?.parteDePago?.valor ?? 0) : Number(form.precio);
   const valorEntregado = esPermuta ? Number(form.entregadoValor) : null;
-  const montosListos = precio > 0 && (!esPermuta || valorEntregado > 0);
-  const pago = montosListos ? aPagar(precio, valorEntregado) : null;
+  const montosListos = esPermuta ? valorEntregado > 0 : precio > 0;
+  const pago = montosListos ? aPagar(precio, valorEntregado, sena?.monto ?? 0) : null;
   const enActo = form.pagoEnActo === "" ? pago?.monto ?? 0 : Number(form.pagoEnActo);
   const haySaldo = Boolean(pago) && enActo < pago.monto;
 
-  const opcionesStock = stock.map((a) => ({ valor: a.ref, label: `${a.brand} ${a.model} ${a.year} · ref ${a.ref}` }));
-  // Si el auto elegido ya no está a la venta (se vendió después), igual se ve.
-  if (contrato?.permuta && !opcionesStock.some((o) => o.valor === contrato.permuta.ref)) {
-    const p = contrato.permuta;
-    opcionesStock.unshift({ valor: p.ref, label: `${p.marca} ${p.modelo} ${p.anio} · ref ${p.ref}` });
-  }
-
   function validar() {
-    if (!(precio > 0)) {
-      return esPermuta ? "Falta el valor de toma del usado: cargalo en Editar ingreso." : "El valor del vehículo del cliente es obligatorio.";
-    }
+    if (!esPermuta && !(precio > 0)) return "El valor del vehículo del cliente es obligatorio.";
     if (precio > TOPE_MONTO) return "El valor del vehículo supera el máximo que admite el sistema.";
     if (esPermuta) {
-      if (!form.autoEntregadoRef) return "Elegí el vehículo que vende la agencia.";
+      if (!auto) return "El trámite no tiene el vehículo que compra el cliente: elegilo en Editar trámite.";
       if (!(valorEntregado > 0)) return "Falta el precio de venta del vehículo de la agencia.";
       if (valorEntregado > TOPE_MONTO) return "El valor del vehículo de la agencia supera el máximo que admite el sistema.";
     }
@@ -175,10 +151,7 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
     try {
       await guardarCompraventaIngreso(ingresoId, {
         precio,
-        ...(esPermuta && {
-          autoEntregadoRef: form.autoEntregadoRef,
-          entregadoValor: valorEntregado,
-        }),
+        ...(esPermuta && { entregadoValor: valorEntregado }),
         formaPago: form.formaPago,
         pagoEnActo: enActo,
         saldoFecha: haySaldo ? form.saldoFecha : null,
@@ -202,12 +175,9 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
   const paso = () => ++n;
 
   return (
-    <Modal titulo={esPermuta ? "Boleto de compraventa con parte de pago" : "Boleto de compraventa"} icono={FileSignature} onCerrar={onCerrar} ancho="max-w-3xl">
+    <Modal titulo={esParteDePago && precio > 0 ? "Boleto de compraventa con parte de pago" : "Boleto de compraventa"} icono={FileSignature} onCerrar={onCerrar} ancho="max-w-3xl">
       <div className="px-6 py-5 space-y-5 overflow-y-auto">
         {error && <Aviso>{error}</Aviso>}
-        {esPermuta && !(precio > 0) && (
-          <Aviso tono="alerta">El trámite no tiene cargado el valor de toma del usado. Cargalo en Editar ingreso antes de guardar el boleto.</Aviso>
-        )}
         <p className="text-xs text-muted-foreground">Los campos con * son obligatorios.</p>
 
         {/* En la parte de pago el valor del usado no se pide: es el valor de toma del trámite. */}
@@ -223,17 +193,16 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
           <Paso
             n={paso()}
             titulo="Vehículo que vende la agencia"
-            ayuda="Sale del stock a la venta. Dominio, motor y chasis se toman de su ficha en Vehículos."
+            ayuda="Se eligió al crear el trámite (se cambia en Editar trámite). Dominio, motor y chasis se toman de su ficha en Vehículos."
             primero
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Selector
-                label="Vehículo *"
-                valor={form.autoEntregadoRef}
-                onCambio={elegirAuto}
-                opciones={opcionesStock}
-                vacio="Elegí un vehículo…"
-              />
+              <div>
+                <span className="block text-xs font-medium text-muted-foreground mb-1.5">{sena ? "Vehículo señado" : "Vehículo"}</span>
+                <p className="h-9 flex items-center text-sm text-foreground">
+                  {auto ? `${auto.marca} ${auto.modelo} ${auto.anio} · ref ${auto.ref}` : "—"}
+                </p>
+              </div>
               <Numero
                 label="Precio de venta ($) *"
                 valor={form.entregadoValor}
@@ -241,7 +210,8 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
                 ayuda="Se completa con el precio del auto; se puede ajustar."
               />
             </div>
-            {elegido && !elegido.dominio && (
+            {!auto && <Aviso tono="alerta">El trámite no tiene el vehículo que compra el cliente. Elegilo en Editar trámite.</Aviso>}
+            {auto && !auto.dominio && (
               <Aviso tono="alerta">Este vehículo no tiene dominio cargado. Completalo en Vehículos → Editar antes de guardar el boleto.</Aviso>
             )}
           </Paso>
@@ -250,7 +220,11 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
         <Paso
           n={paso()}
           titulo="Pago"
-          ayuda={esPermuta ? "El precio del auto menos el usado y lo que el cliente tiene para entregar." : "Lo que la agencia le paga al vendedor."}
+          ayuda={
+            esPermuta
+              ? `El precio del auto menos ${[precio > 0 && "el usado", sena && "la seña"].filter(Boolean).concat("lo que el cliente tiene para entregar").join(", ")}.`
+              : "Lo que la agencia le paga al vendedor."
+          }
         >
           {pago && (
             <p className="text-sm text-foreground">
@@ -259,12 +233,12 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
                   {(esPermuta ? QUIEN_PAGA_SALDO : QUIEN_PAGA)[pago.pagador]} <strong>{pesos(pago.monto)}</strong>
                 </>
               ) : (
-                "El usado cubre todo el precio: no queda saldo a pagar."
+                `${precio > 0 ? "El usado" : "La seña"}${precio > 0 && sena ? " y la seña cubren" : " cubre"} todo el precio: no queda saldo a pagar.`
               )}
             </p>
           )}
           {esPermuta && pago?.pagador === "cliente" && Number.isFinite(enActo) && (
-            <DesgloseParteDePago precioAuto={valorEntregado} valorUsado={precio} enActo={enActo} />
+            <DesgloseParteDePago precioAuto={valorEntregado} valorUsado={precio} sena={sena?.monto ?? 0} enActo={enActo} />
           )}
           {pago?.pagador && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

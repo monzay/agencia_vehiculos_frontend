@@ -35,20 +35,22 @@ const CONSIGNACION = {
   ],
 };
 
-// Compra y permuta: el boleto por duplicado, los mismos recibos y, al final, el
-// compromiso de transferencia que se lleva el vendedor.
+// Compra, parte de pago y contado: el boleto por duplicado y, si la agencia
+// recibe un usado, los mismos recibos y el compromiso de transferencia que se
+// lleva el vendedor. Sin usado no hay nada recibido que documentar.
+// (Las copias firmadas antes de existir `conUsado` lo traen undefined: tienen usado.)
 const COMPRAVENTA = {
   cargar: obtenerImpresosCompraventa,
   hojas: [
     { clave: "boleto-cliente", render: (d, marca) => <Boleto datos={d} copia="original para el cliente" marcaAgua={marca} /> },
     { clave: "boleto-agencia", render: (d, marca) => <Boleto datos={d} copia="duplicado para la agencia" marcaAgua={marca} /> },
-    RECIBO_DOCUMENTACION,
-    RECIBO_RECEPCION,
-    { clave: "compromiso-transferencia", render: (d) => <CompromisoTransferencia datos={d} /> },
+    { ...RECIBO_DOCUMENTACION, soloConUsado: true },
+    { ...RECIBO_RECEPCION, soloConUsado: true },
+    { clave: "compromiso-transferencia", render: (d) => <CompromisoTransferencia datos={d} />, soloConUsado: true },
   ],
 };
 
-const POR_MODALIDAD = { consignacion: CONSIGNACION, compra: COMPRAVENTA, permuta: COMPRAVENTA };
+const POR_MODALIDAD = { consignacion: CONSIGNACION, compra: COMPRAVENTA, permuta: COMPRAVENTA, contado: COMPRAVENTA };
 
 const LARGO_MARCA = 24;
 
@@ -107,7 +109,10 @@ export function Impresos({ ingresoId, modalidad, onCerrar }) {
             <Loader2 className="w-4 h-4 animate-spin" /> Armando los documentos…
           </p>
         )}
-        {datos && hojas.map(({ clave, render }) => <Fragment key={clave}>{render(datos, marcaAgua)}</Fragment>)}
+        {datos &&
+          hojas
+            .filter((h) => !h.soloConUsado || datos.conUsado !== false)
+            .map(({ clave, render }) => <Fragment key={clave}>{render(datos, marcaAgua)}</Fragment>)}
       </div>
     </div>,
     document.body

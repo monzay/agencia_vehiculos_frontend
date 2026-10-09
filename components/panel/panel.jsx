@@ -23,9 +23,10 @@ import { SeccionResumen } from "./secciones/resumen";
 import { SeccionConsultas } from "./secciones/consultas";
 import { SeccionClientes } from "./secciones/clientes";
 import { SeccionFinanciacion } from "./secciones/financiacion";
-import { SeccionVentas } from "./secciones/ventas";
+import { SeccionTramites } from "./secciones/tramites";
 import { SeccionConsignaciones } from "./secciones/consignaciones";
 import { SeccionDocumentos } from "./secciones/documentos";
+import { SeccionSenas } from "./secciones/senas";
 import { SeccionAsesores } from "./secciones/asesores";
 import { SeccionEntregas } from "./secciones/entregas";
 import { SeccionVehiculos } from "./secciones/vehiculos";
@@ -37,6 +38,11 @@ import { SeccionConfiguracion } from "./secciones/configuracion";
 // acepta /api/novedades/:seccion.
 const SECCIONES_CON_NOVEDADES = ["consultas", "ventas", "clientes", "financiacion", "descuentos"];
 
+// Las consultas de venta/consignación ("ventas" en novedades) se ven dentro de
+// Consultas: su badge se suma al de Consultas y se marcan vistas juntas.
+const VISTAS_JUNTAS = { consultas: ["consultas", "ventas"] };
+const conVentasEnConsultas = (n) => ({ ...n, consultas: (n.consultas ?? 0) + (n.ventas ?? 0) });
+
 // `consultaId` viene de /admin/<sesionId>, el link de los avisos de lead a
 // Telegram: entra directo a Consultas con esa consulta ya abierta.
 export function Panel({ consultaId = null }) {
@@ -45,6 +51,9 @@ export function Panel({ consultaId = null }) {
   const [colapsada, setColapsada] = useState(false);
   const [menuMovil, setMenuMovil] = useState(false); // drawer del sidebar en móvil
   const [busqueda, setBusqueda] = useState("");
+  // Trámite a abrir al entrar a Documentos: { id, modalidad }. Lo piden
+  // Trámites al crear uno y Señas al iniciar uno.
+  const [tramiteAAbrir, setTramiteAAbrir] = useState(null);
 
   const [usuario, setUsuario] = useState(null); // { id, nombre, rol }
   const [verificando, setVerificando] = useState(true);
@@ -144,10 +153,13 @@ export function Panel({ consultaId = null }) {
   // filas nuevas de esta visita) y marco "visto ahora" (resetea el contador).
   useEffect(() => {
     if (!usuario || !SECCIONES_CON_NOVEDADES.includes(seccion)) return;
-    setNuevoDesde((prev) => ({ ...prev, [seccion]: vistoAt[seccion] ?? null }));
-    marcarSeccionVista(seccion)
-      .then(() => setNovedades((prev) => ({ ...prev, [seccion]: 0 })))
-      .catch(() => {});
+    const secciones = VISTAS_JUNTAS[seccion] ?? [seccion];
+    setNuevoDesde((prev) => ({ ...prev, ...Object.fromEntries(secciones.map((s) => [s, vistoAt[s] ?? null])) }));
+    secciones.forEach((s) =>
+      marcarSeccionVista(s)
+        .then(() => setNovedades((prev) => ({ ...prev, [s]: 0 })))
+        .catch(() => {})
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccion, usuario]);
 
@@ -166,6 +178,7 @@ export function Panel({ consultaId = null }) {
         seccion={seccion}
         onSeccion={(s) => {
           setSeccion(s);
+          setTramiteAAbrir(null);
           setMenuMovil(false);
         }}
         colapsada={colapsada}
@@ -173,7 +186,7 @@ export function Panel({ consultaId = null }) {
         esAdmin={esAdmin}
         abierta={menuMovil}
         onCerrar={() => setMenuMovil(false)}
-        novedades={novedades}
+        novedades={conVentasEnConsultas(novedades)}
       />
 
       {/* Backdrop del drawer en móvil */}
@@ -207,17 +220,48 @@ export function Panel({ consultaId = null }) {
             <div key={seccion} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {seccion === "resumen" && <SeccionResumen resumen={resumen} />}
               {seccion === "consultas" && (
-                <SeccionConsultas busqueda={busqueda} mostrarAsesor={config?.reparticion_equitativa !== false} nuevoDesde={nuevoDesde.consultas} abrirId={consultaId} />
+                <SeccionConsultas
+                  busqueda={busqueda}
+                  mostrarAsesor={config?.reparticion_equitativa !== false}
+                  nuevoDesde={nuevoDesde.consultas}
+                  nuevoDesdeVenta={nuevoDesde.ventas}
+                  abrirId={consultaId}
+                />
               )}
               {seccion === "clientes" && <SeccionClientes busqueda={busqueda} refrescar={refrescar} nuevoDesde={nuevoDesde.clientes} />}
               {seccion === "financiacion" && esAdmin && (
                 <SeccionFinanciacion busqueda={busqueda} refrescar={refrescar} />
               )}
-              {seccion === "ventas" && <SeccionVentas busqueda={busqueda} refrescar={refrescar} nuevoDesde={nuevoDesde.ventas} />}
+              {seccion === "tramites" && esAdmin && (
+                <SeccionTramites
+                  onSenaCreada={() => setSeccion("senas")}
+                  onTramiteCreado={(tramite) => {
+                    setTramiteAAbrir(tramite);
+                    setSeccion("documentos");
+                  }}
+                />
+              )}
               {seccion === "consignaciones" && (
                 <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
               )}
-              {seccion === "documentos" && <SeccionDocumentos busqueda={busqueda} esAdmin={esAdmin} />}
+              {seccion === "senas" && (
+                <SeccionSenas
+                  busqueda={busqueda}
+                  esAdmin={esAdmin}
+                  onAbrirTramite={(id) => {
+                    setTramiteAAbrir({ id, modalidad: "permuta" });
+                    setSeccion("documentos");
+                  }}
+                />
+              )}
+              {seccion === "documentos" && (
+                <SeccionDocumentos
+                  key={tramiteAAbrir?.id ?? "documentos"}
+                  busqueda={busqueda}
+                  esAdmin={esAdmin}
+                  abrirTramite={tramiteAAbrir}
+                />
+              )}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
               {seccion === "contabilidad" && <SeccionContabilidad />}
               {seccion === "descuentos" && (

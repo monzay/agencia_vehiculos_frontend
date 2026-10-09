@@ -23,6 +23,7 @@ export function ResumenCompraventa({ contrato }) {
           ["Vende la agencia", `${permuta.marca} ${permuta.modelo} ${permuta.anio} · ${permuta.dominio}`],
           ["Precio de venta", pesos(permuta.valor)],
           ["Usado en parte de pago", pesos(contrato.precio)],
+          ...(contrato.pago.sena > 0 ? [["Seña ya pagada", pesos(contrato.pago.sena)]] : []),
         ]
       : [["Valor del vehículo del cliente", pesos(contrato.precio)]]),
     ["Pago", resumenPago(contrato.pago)],

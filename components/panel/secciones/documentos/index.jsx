@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Car, User, Plus, Loader2, AlertTriangle, Clock, Archive } from "lucide-react";
+import { Car, User, Loader2, AlertTriangle, Clock, Archive } from "lucide-react";
 import { obtenerIngresos, obtenerCatalogoDocumentos } from "@/lib/api";
 import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
 import { combinadorClases as cn } from "@/lib/utilidades";
@@ -10,13 +10,13 @@ import { Tabla, FILA, CELDA } from "../../ui/tabla";
 import { Insignia } from "../../ui/insignia";
 import { Aviso } from "./campos";
 import { MODALIDADES, MODALIDAD } from "./modalidades";
-import { tituloVehiculo, tieneVehiculo } from "./formato";
+import { vehiculoDelTramite } from "./formato";
 import { IngresoFormulario } from "./ingreso-formulario";
 import { IngresoDetalle } from "./ingreso-detalle";
 
-// Documentos: cómo entra un vehículo a la agencia (consignación, parte de
-// pago o compra) y qué papeles hacen falta. Las tres comparten el legajo de papeles;
-// cambia el contrato que se firma.
+// Documentos: los legajos de cada trámite (consignación, parte de pago, venta al
+// contado o compra): papeles, contrato y recibos. Los trámites se crean en la
+// sección Trámites; acá se siguen.
 
 const PAGINA = 10;
 
@@ -81,19 +81,18 @@ function EstadoPapeles({ papeles }) {
   );
 }
 
-function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
+// Una venta sin usado no recibe ningún auto: no tiene papeles del cliente.
+const SinPapeles = () => <span className="text-xs text-muted-foreground" title="El cliente no entrega un vehículo">—</span>;
+
+function ListaIngresos({ modalidad, busqueda, onAbrir }) {
   const [estado, setEstado] = useState("");
-  const [editando, setEditando] = useState(null); // null | undefined (nuevo) | ingreso
-  const [recarga, setRecarga] = useState(0);
 
   const { items, total, hayMas, cargandoInicial, cargandoMas, error: errorLista, cargarMas } = usarListaPaginada(
     ({ offset, limite }) => obtenerIngresos({ modalidad, estado, q: busqueda, offset, limite }),
-    [modalidad, estado, busqueda, recarga],
+    [modalidad, estado, busqueda],
     { limite: PAGINA }
   );
 
-  const refrescar = () => setRecarga((n) => n + 1);
-  const { nuevo } = MODALIDAD[modalidad];
   const vacio = `Todavía no se registró ninguna ${MODALIDAD[modalidad].label.toLowerCase()}.`;
   // Publicado y retirado son estados de la consignación: un auto comprado o
   // tomado en parte de pago ya es de la agencia y no pasa por ahí.
@@ -117,11 +116,6 @@ function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
             {f.label}
           </button>
         ))}
-        {esAdmin && (
-          <Boton variante="primario" className="ml-auto gap-1.5" onClick={() => setEditando(undefined)}>
-            <Plus className="w-4 h-4" /> {nuevo}
-          </Boton>
-        )}
       </div>
 
       {errorLista && <Aviso>{errorLista}</Aviso>}
@@ -139,43 +133,41 @@ function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
           {/* Desktop: tabla */}
           <div className="hidden md:block">
             <Tabla columnas={COLUMNAS} vacio={items.length === 0} mensajeVacio={vacio}>
-              {items.map((i) => (
-                <tr key={i.id} className={cn(FILA, "cursor-pointer")} onClick={() => onAbrir(i.id)}>
-                  <td className={CELDA}>
-                    <span
-                      className={cn(
-                        "font-medium inline-flex items-center gap-2",
-                        tieneVehiculo(i.vehiculo) ? "text-foreground" : "text-muted-foreground"
+              {items.map((i) => {
+                const v = vehiculoDelTramite(i);
+                return (
+                  <tr key={i.id} className={cn(FILA, "cursor-pointer")} onClick={() => onAbrir(i.id)}>
+                    <td className={CELDA}>
+                      <span className={cn("font-medium inline-flex items-center gap-2", v.conDatos ? "text-foreground" : "text-muted-foreground")}>
+                        <Car className="w-3.5 h-3.5 text-accent shrink-0" /> {v.titulo}
+                      </span>
+                      {v.dominio && <span className="block text-xs text-muted-foreground">{v.dominio}</span>}
+                    </td>
+                    <td className={CELDA}>
+                      <span className="inline-flex items-center gap-1.5 text-foreground">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" /> {nombreCompleto(i.titular)}
+                      </span>
+                      {i.titular?.dni && <span className="block text-xs text-muted-foreground">DNI {i.titular.dni}</span>}
+                    </td>
+                    <td className={`${CELDA} whitespace-nowrap`}>
+                      {i.conUsado ? <EstadoPapeles papeles={i.papeles} /> : <SinPapeles />}
+                    </td>
+                    <td className={`${CELDA} whitespace-nowrap text-xs`}>
+                      {i.conUsado ? <EstadoOriginales papeles={i.papeles} /> : <SinPapeles />}
+                    </td>
+                    <td className={`${CELDA} whitespace-nowrap`}>
+                      {i.contratoFirmado ? (
+                        <Insignia variante="exito">Firmado</Insignia>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin firmar</span>
                       )}
-                    >
-                      <Car className="w-3.5 h-3.5 text-accent shrink-0" /> {tituloVehiculo(i.vehiculo)}
-                    </span>
-                    {tieneVehiculo(i.vehiculo) && <span className="block text-xs text-muted-foreground">{i.vehiculo.dominio}</span>}
-                  </td>
-                  <td className={CELDA}>
-                    <span className="inline-flex items-center gap-1.5 text-foreground">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" /> {nombreCompleto(i.titular)}
-                    </span>
-                    {i.titular?.dni && <span className="block text-xs text-muted-foreground">DNI {i.titular.dni}</span>}
-                  </td>
-                  <td className={`${CELDA} whitespace-nowrap`}>
-                    <EstadoPapeles papeles={i.papeles} />
-                  </td>
-                  <td className={`${CELDA} whitespace-nowrap text-xs`}>
-                    <EstadoOriginales papeles={i.papeles} />
-                  </td>
-                  <td className={`${CELDA} whitespace-nowrap`}>
-                    {i.contratoFirmado ? (
-                      <Insignia variante="exito">Firmado</Insignia>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Sin firmar</span>
-                    )}
-                  </td>
-                  <td className={`${CELDA} whitespace-nowrap`}>
-                    <Insignia variante={VARIANTE_ESTADO[i.estado] ?? "neutral"}>{LABEL_ESTADO[i.estado] ?? i.estado}</Insignia>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className={`${CELDA} whitespace-nowrap`}>
+                      <Insignia variante={VARIANTE_ESTADO[i.estado] ?? "neutral"}>{LABEL_ESTADO[i.estado] ?? i.estado}</Insignia>
+                    </td>
+                  </tr>
+                );
+              })}
             </Tabla>
           </div>
 
@@ -194,18 +186,22 @@ function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-foreground inline-flex items-center gap-1.5 min-w-0">
                       <Car className="w-3.5 h-3.5 text-accent shrink-0" />
-                      <span className="truncate">{tituloVehiculo(i.vehiculo)}</span>
+                      <span className="truncate">{vehiculoDelTramite(i).titulo}</span>
                     </p>
                     <Insignia variante={VARIANTE_ESTADO[i.estado] ?? "neutral"}>{LABEL_ESTADO[i.estado] ?? i.estado}</Insignia>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {[i.vehiculo.dominio, nombreCompleto(i.titular)].filter(Boolean).join(" · ")}
+                    {[vehiculoDelTramite(i).dominio, nombreCompleto(i.titular)].filter(Boolean).join(" · ")}
                   </p>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="inline-flex items-center gap-3">
-                      <EstadoPapeles papeles={i.papeles} />
-                      <EstadoOriginales papeles={i.papeles} />
-                    </span>
+                    {i.conUsado ? (
+                      <span className="inline-flex items-center gap-3">
+                        <EstadoPapeles papeles={i.papeles} />
+                        <EstadoOriginales papeles={i.papeles} />
+                      </span>
+                    ) : (
+                      <SinPapeles />
+                    )}
                     <span className="text-muted-foreground">{i.contratoFirmado ? "Contrato firmado" : "Sin firmar"}</span>
                   </div>
                 </button>
@@ -223,17 +219,16 @@ function ListaIngresos({ modalidad, busqueda, esAdmin, onAbrir }) {
         </>
       )}
 
-      {editando !== null && (
-        <IngresoFormulario ingreso={editando} modalidad={modalidad} onCerrar={() => setEditando(null)} onGuardado={refrescar} />
-      )}
     </div>
   );
 }
 
-export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
-  const [modalidad, setModalidad] = useState(MODALIDADES[0].id);
+// `abrirTramite`: { id, modalidad } de un trámite a abrir de entrada (recién
+// creado en Trámites, o iniciado desde una seña).
+export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite = null }) {
+  const [modalidad, setModalidad] = useState(abrirTramite?.modalidad ?? MODALIDADES[0].id);
   const [catalogo, setCatalogo] = useState(null);
-  const [abierto, setAbierto] = useState(null); // id del ingreso en detalle
+  const [abierto, setAbierto] = useState(abrirTramite?.id ?? null); // id del ingreso en detalle
   const [editando, setEditando] = useState(null);
   const [error, setError] = useState(null);
   const [recarga, setRecarga] = useState(0);
@@ -294,7 +289,7 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false }) {
             onCambio={() => setRecarga((n) => n + 1)}
           />
         ) : (
-          <ListaIngresos key={`${modalidad}-${recarga}`} modalidad={modalidad} busqueda={busqueda} esAdmin={esAdmin} onAbrir={setAbierto} />
+          <ListaIngresos key={`${modalidad}-${recarga}`} modalidad={modalidad} busqueda={busqueda} onAbrir={setAbierto} />
         )
       )}
 

@@ -2,12 +2,12 @@
 
 import { Fragment, useState } from "react";
 import {
-  HandCoins, CalendarClock, CalendarDays,
-  Loader2, Pencil, Trash2, Link2, ListChecks, CheckCircle2, Circle,
+  CalendarClock, CalendarDays,
+  Loader2, Pencil, Trash2, ListChecks, CheckCircle2, Circle,
   ChevronRight, ChevronDown,
 } from "lucide-react";
 import {
-  crearFinanciacion, actualizarFinanciacion, eliminarFinanciacion, marcarCuotaPagada,
+  actualizarFinanciacion, eliminarFinanciacion, marcarCuotaPagada,
   obtenerFinanciacionesPagina,
 } from "@/lib/api";
 import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
@@ -67,13 +67,14 @@ function Item({ label, children }) {
   );
 }
 
+// Las financiaciones se crean dentro del legajo de una parte de pago (último
+// paso del trámite). Acá se siguen: cuotas, datos y edición del plan.
 export function SeccionFinanciacion({ busqueda, refrescar }) {
   const [abierto, setAbierto] = useState(false);
-  const [editId, setEditId] = useState(null); // null = alta, id = edición
+  const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const [aviso, setAviso] = useState(null); // feedback de vinculación por teléfono
   const [borrandoId, setBorrandoId] = useState(null);
   const [aBorrar, setABorrar] = useState(null);
   const [expandidoId, setExpandidoId] = useState(null); // fila con panel de datos abierto
@@ -88,15 +89,6 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
     [busqueda, refrescar],
     { limite: PAGINA }
   );
-
-  const editando = editId != null;
-
-  function abrirAlta() {
-    setEditId(null);
-    setForm(FORM_VACIO);
-    setError(null);
-    setAbierto(true);
-  }
 
   function abrirEdicion(f) {
     setEditId(f.id);
@@ -147,17 +139,7 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
     setGuardando(true);
     setError(null);
     try {
-      if (editando) {
-        await actualizarFinanciacion(editId, form);
-        setAviso(null);
-      } else {
-        const creada = await crearFinanciacion(form);
-        setAviso(
-          creada?.clienteVinculado
-            ? `Se vinculó la financiación al cliente existente con ese teléfono (${creada.nombre}).`
-            : null
-        );
-      }
+      await actualizarFinanciacion(editId, form);
       setAbierto(false);
       recargar();
     } catch (err) {
@@ -250,16 +232,7 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
         <p className="text-sm text-muted-foreground">
           {total} {total === 1 ? "financiación" : "financiaciones"} en total
         </p>
-        <Boton variante="primario" onClick={abrirAlta}>
-          <HandCoins className="w-4 h-4" /> Nueva financiación
-        </Boton>
       </div>
-
-      {aviso && (
-        <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3 text-sm text-sky-500 inline-flex items-center gap-2">
-          <Link2 className="w-4 h-4 shrink-0" /> {aviso}
-        </div>
-      )}
 
       {error && !abierto && !detalle && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm text-destructive">
@@ -375,19 +348,12 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
       {/* Modal de alta / edición */}
       {abierto && (
         <Modal
-          titulo={editando ? "Editar financiación" : "Nueva financiación"}
-          icono={editando ? Pencil : HandCoins}
+          titulo="Editar financiación"
+          icono={Pencil}
           onCerrar={() => setAbierto(false)}
           ancho="max-w-lg"
         >
           <form onSubmit={enviar} className="px-6 py-5 space-y-4 overflow-auto">
-            {!editando && (
-              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                <Link2 className="w-3.5 h-3.5 shrink-0" />
-                Si el teléfono ya existe, se vincula toda la información al mismo cliente.
-              </p>
-            )}
-
             <Campo label="Nombre *" valor={form.nombre} onCambio={(v) => cambiar("nombre", v)} placeholder="Ej: Juan Pérez" autoFocus />
             <div className="grid grid-cols-2 gap-3">
               <Campo label="Teléfono *" valor={form.telefono} onCambio={(v) => cambiar("telefono", v)} placeholder="3811234567" />
@@ -448,7 +414,7 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
                 Cancelar
               </Boton>
               <Boton type="submit" variante="primario" cargando={guardando}>
-                {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Crear financiación"}
+                {guardando ? "Guardando…" : "Guardar cambios"}
               </Boton>
             </ModalPie>
           </form>

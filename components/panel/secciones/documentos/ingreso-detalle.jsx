@@ -16,19 +16,31 @@ import {
   EyeOff,
   LogOut,
   CircleDollarSign,
+  Undo2,
+  HandCoins,
+  BookmarkCheck,
 } from "lucide-react";
-import { obtenerIngreso, cambiarEstadoIngreso, venderIngreso } from "@/lib/api";
+import {
+  obtenerIngreso,
+  cambiarEstadoIngreso,
+  venderIngreso,
+  deshacerVentaIngreso,
+  venderAutoDelBoleto,
+  deshacerVentaDelBoleto,
+} from "@/lib/api";
 import { VenderModal } from "../vender-modal";
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { Boton } from "../../ui/boton";
 import { Insignia } from "../../ui/insignia";
+import { ConfirmarModal } from "../../ui/confirmar-modal";
 import { Aviso } from "./campos";
 import { Papeles } from "./papeles";
 import { Impresos } from "./impresos";
 import { RequisitosContrato, PapelesObligatorios } from "./requisitos-contrato";
-import { PublicarModal } from "./publicar-modal";import { VINCULO } from "./vinculos";
+import { PublicarModal } from "./publicar-modal";
+import { FinanciacionModal } from "./financiacion-modal";import { VINCULO } from "./vinculos";
 import { CONTRATOS } from "./contratos";
-import { MODALIDAD } from "./modalidades";
+import { MODALIDAD, vendeLaAgencia } from "./modalidades";
 import { tituloVehiculo, tieneVehiculo, dni, cuit, fechaDeMomento } from "./formato";
 import { pesos } from "./impresos/etiquetas";
 
@@ -110,8 +122,10 @@ function Fechas({ ingreso }) {
 }
 
 // Lo que el cliente deja en la parte de pago, con el mismo formato de filas.
-function ParteDePago({ datos }) {
+// `sena`: si el trámite nació de una seña, lo que ya pagó para reservar el auto.
+function ParteDePago({ datos, sena }) {
   const filas = [
+    ...(sena ? [{ label: "Seña", valor: `${pesos(sena.monto)} · ${fechaDeMomento(sena.senado)}` }] : []),
     { label: "Vehículo que deja", valor: datos.vehiculo || "No entrega vehículo" },
     { label: "Valor de toma", valor: datos.valor != null ? pesos(datos.valor) : null },
     { label: "Tiene para entregar", valor: datos.efectivo != null ? pesos(datos.efectivo) : null },
@@ -129,6 +143,52 @@ function ParteDePago({ datos }) {
   );
 }
 
+// Lo que la agencia publicó para el auto que vende: el descuento (con el precio
+// que vio el cliente en la web) y las promociones vigentes.
+const valorPromo = (p) =>
+  p.descuento == null ? null : p.descuento_tipo === "monto" ? `−${pesos(p.descuento)}` : `−${p.descuento}%`;
+
+function Beneficios({ datos }) {
+  const filas = [
+    ...(datos.descuento
+      ? [
+          { label: "Descuento", valor: `${datos.descuento.nombre} · −${pesos(datos.ahorro)}` },
+          { label: "Precio con descuento", valor: `${pesos(datos.precioFinal)} (lista ${pesos(datos.precio)})` },
+        ]
+      : []),
+    ...datos.promociones.map((p) => ({ label: "Promoción", valor: [p.nombre, valorPromo(p)].filter(Boolean).join(" · ") })),
+  ];
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+        Beneficios del vehículo · {datos.auto.marca} {datos.auto.modelo}
+      </p>
+      {filas.map(({ label, valor }, i) => (
+        <div key={i} className="grid grid-cols-[7.5rem_1fr] gap-x-4 py-1 border-t border-border">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          <span className="text-xs text-foreground tabular-nums">{valor}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// El precio del auto que vende la agencia y, si tiene descuento, cuánto queda.
+function PrecioDeVenta({ precio, beneficios }) {
+  const conDescuento = beneficios?.descuento ? beneficios : null;
+  return (
+    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+      Precio <span className="text-sm font-semibold text-foreground">{pesos(precio)}</span>
+      {conDescuento && (
+        <>
+          {" · "}Con descuento <span className="text-sm font-semibold text-foreground">{pesos(conDescuento.precioFinal)}</span>{" "}
+          ({conDescuento.descuento.nombre} · −{pesos(conDescuento.ahorro)})
+        </>
+      )}
+    </p>
+  );
+}
+
 // `version` cambia cuando el ingreso se edita afuera (el modal de Editar
 // ingreso): sin recargar, el detalle y el próximo Editar mostrarían datos viejos.
 export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio }) {
@@ -137,11 +197,14 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
   const [pestana, setPestana] = useState("papeles");
   const [editandoContrato, setEditandoContrato] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
+  const [financiando, setFinanciando] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const [vendiendo, setVendiendo] = useState(false);
   const [confirmandoVenta, setConfirmandoVenta] = useState(false);
   const [firmando, setFirmando] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  // La venta que se confirma: "vender" | "deshacer" | null.
+  const [confirmandoAccionVenta, setConfirmandoAccionVenta] = useState(null);
   const [avisos, setAvisos] = useState([]);
 
   const cargar = useCallback(() => {
@@ -175,6 +238,25 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
       setError(e.message);
     } finally {
       setCambiandoEstado(false);
+    }
+  }
+
+  // Marcar vendido o deshacerlo. En la consignación se deshace desde acá; en la
+  // venta al contado y la parte de pago se marca el auto del boleto.
+  async function accionVenta() {
+    const deshacer = confirmandoAccionVenta === "deshacer";
+    setCambiandoEstado(true);
+    setError(null);
+    try {
+      if (ingreso.modalidad === "consignacion") await deshacerVentaIngreso(ingreso.id);
+      else if (deshacer) await deshacerVentaDelBoleto(ingreso.id);
+      else await venderAutoDelBoleto(ingreso.id);
+      refrescar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCambiandoEstado(false);
+      setConfirmandoAccionVenta(null);
     }
   }
 
@@ -220,6 +302,11 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
   // Publicar y retirar son de la consignación: el auto comprado o tomado en parte de pago ya
   // es de la agencia.
   const esConsignacion = ingreso.modalidad === "consignacion";
+  // La agencia vende un auto propio (contado o parte de pago): se vende desde acá.
+  const autoVendido = vendeLaAgencia(ingreso.modalidad) ? ingreso.autoInteres : null;
+  // Sin usado no hay papeles del cliente: el legajo es solo el boleto.
+  const pestanas = ingreso.conUsado ? PESTANAS : PESTANAS.filter((p) => p.id !== "papeles");
+  const pestanaActual = pestanas.some((p) => p.id === pestana) ? pestana : "contrato";
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -229,12 +316,19 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {esAdmin && (
             <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => onEditar(ingreso)}>
-              <Pencil className="w-3.5 h-3.5" /> Editar ingreso
+              <Pencil className="w-3.5 h-3.5" /> Editar trámite
             </Boton>
           )}
           <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => setImprimiendo(true)} disabled={!contrato || contratoBloqueado}>
             <Printer className="w-3.5 h-3.5" /> Contrato y recibos
           </Boton>
+          {/* Solo la parte de pago tiene saldo que financiar; las financiaciones son del admin. */}
+          {esAdmin && ingreso.modalidad === "permuta" && (
+            <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => setFinanciando(true)}>
+              <HandCoins className="w-3.5 h-3.5" /> Financiación
+              {ingreso.financiacion && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+            </Boton>
+          )}
         </div>
       </div>
 
@@ -255,21 +349,38 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
           {/* Solo identificación. Los kilómetros, motor, chasis y origen se ven
               al editar el ingreso y al comparar los papeles, que es donde se
               usan; acá arriba no aportaban nada. */}
-          <h2 className="text-base font-semibold text-foreground inline-flex items-center gap-2">
-            <Car className="w-4 h-4 text-accent" />
-            {tieneVehiculo(vehiculo) ? (
-              <>
-                {tituloVehiculo(vehiculo)}
-                <span className="font-normal text-muted-foreground">{vehiculo.dominio}</span>
-              </>
-            ) : (
-              <span className="font-normal text-muted-foreground">
-                Sin título cargado · los datos del vehículo se toman del título, en Papeles
-              </span>
-            )}
-          </h2>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+              <Car className="w-4 h-4 text-accent" />
+              {/* En una venta manda el auto que compra el cliente, aunque entregue un usado. */}
+              {autoVendido ? (
+                <>
+                  {`${autoVendido.marca} ${autoVendido.modelo} ${autoVendido.anio}`}
+                  {autoVendido.dominio && <span className="font-normal text-muted-foreground">{autoVendido.dominio}</span>}
+                </>
+              ) : vendeLaAgencia(ingreso.modalidad) ? (
+                <span className="font-normal text-muted-foreground">Falta elegir el vehículo que compra el cliente: Editar trámite</span>
+              ) : tieneVehiculo(vehiculo) ? (
+                <>
+                  {tituloVehiculo(vehiculo)}
+                  <span className="font-normal text-muted-foreground">{vehiculo.dominio}</span>
+                </>
+              ) : (
+                <span className="font-normal text-muted-foreground">
+                  Sin título cargado · los datos del vehículo se toman del título, en Papeles
+                </span>
+              )}
+            </h2>
+            {autoVendido?.precio != null && <PrecioDeVenta precio={autoVendido.precio} beneficios={ingreso.beneficios} />}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Insignia variante="neutral">{MODALIDAD[ingreso.modalidad].label}</Insignia>
+            {/* Solo si el trámite nació de una seña; sin seña no se muestra nada. */}
+            {ingreso.sena && (
+              <Insignia variante="info" title={`Seña del ${fechaDeMomento(ingreso.sena.senado)}: se descuenta del precio en el boleto`}>
+                <BookmarkCheck className="w-3 h-3" /> Con seña {pesos(ingreso.sena.monto)}
+              </Insignia>
+            )}
             {esConsignacion && <Insignia variante={estado.variante}>{estado.label}</Insignia>}
             {firmado && (
               <Insignia variante="exito">
@@ -280,7 +391,35 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
             {/* Solo las acciones que este estado admite. Un desplegable con los
                 tres valores ofrecería "publicado" aunque falte firmar, y el
                 rechazo llegaría recién al intentarlo. */}
-            {/* Vendido no tiene acciones acá: la venta se deshace desde Vehículos. */}
+            {esAdmin && esConsignacion && ingreso.estado === "vendido" && (
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                className="gap-1.5"
+                cargando={cambiandoEstado}
+                onClick={() => setConfirmandoAccionVenta("deshacer")}
+                title="Se marcó vendido por error: vuelve a estar publicado"
+              >
+                <Undo2 className="w-3.5 h-3.5" /> Deshacer venta
+              </Boton>
+            )}
+
+            {/* Venta al contado o con parte de pago: el auto del boleto se marca vendido acá. */}
+            {contrato?.permuta?.vendido && <Insignia variante="exito">Vendido</Insignia>}
+            {esAdmin && contrato?.permuta && (
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                className="gap-1.5"
+                cargando={cambiandoEstado}
+                onClick={() => setConfirmandoAccionVenta(contrato.permuta.vendido ? "deshacer" : "vender")}
+                title={contrato.permuta.vendido ? "Se marcó por error: el auto vuelve a estar a la venta" : "Marca vendido el auto del boleto, a su precio"}
+              >
+                {contrato.permuta.vendido ? <Undo2 className="w-3.5 h-3.5" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
+                {contrato.permuta.vendido ? "Deshacer venta" : "Vendido"}
+              </Boton>
+            )}
+
             {esAdmin && esConsignacion && ingreso.estado !== "vendido" && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {ingreso.estado !== "publicado" && (
@@ -338,21 +477,25 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 pt-3 border-t border-border">
           <Titular persona={ingreso.titular} />
-          <Fechas ingreso={ingreso} />
-          {ingreso.parteDePago && <ParteDePago datos={ingreso.parteDePago} />}
+          <div className="space-y-4">
+            <Fechas ingreso={ingreso} />
+            {ingreso.parteDePago && <ParteDePago datos={ingreso.parteDePago} sena={ingreso.sena} />}
+            {/* Solo si el auto que se vende tiene descuento o promociones. */}
+            {ingreso.beneficios && <Beneficios datos={ingreso.beneficios} />}
+          </div>
         </div>
       </div>
 
       {/* Papeles / Contrato */}
       <div className="flex items-center gap-2">
-        {PESTANAS.map((p) => (
+        {pestanas.map((p) => (
           <button
             key={p.id}
             type="button"
             onClick={() => setPestana(p.id)}
             className={cn(
               "px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
-              pestana === p.id
+              pestanaActual === p.id
                 ? "bg-primary text-primary-foreground border-transparent"
                 : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
             )}
@@ -367,18 +510,23 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
         ))}
       </div>
 
-      {pestana === "papeles" && <Papeles ingreso={ingreso} catalogo={catalogo} esAdmin={esAdmin} onCambio={refrescar} />}
+      {pestanaActual === "papeles" && <Papeles ingreso={ingreso} catalogo={catalogo} esAdmin={esAdmin} onCambio={refrescar} />}
 
       {/* Solo la consignación trae requisitos: compra y parte de pago no. */}
-      {pestana === "contrato" && ingreso.requisitosContrato && <PapelesObligatorios requisitos={ingreso.requisitosContrato} />}
+      {pestanaActual === "contrato" && ingreso.requisitosContrato && <PapelesObligatorios requisitos={ingreso.requisitosContrato} />}
 
-      {pestana === "contrato" && contratoBloqueado && (
+      {pestanaActual === "contrato" && contratoBloqueado && (
         <div className="rounded-xl border border-border bg-card p-4">
           <RequisitosContrato requisitos={ingreso.requisitosContrato} />
         </div>
       )}
 
-      {pestana === "contrato" && !contratoBloqueado && (
+      {/* Se cambió el auto del trámite después de guardar el boleto: hay que guardarlo de nuevo. */}
+      {pestanaActual === "contrato" && !firmado && contrato?.permuta && autoVendido && contrato.permuta.ref !== autoVendido.ref && (
+        <Aviso tono="alerta">El vehículo del trámite cambió. Volvé a guardar las condiciones del boleto para firmarlo o imprimirlo.</Aviso>
+      )}
+
+      {pestanaActual === "contrato" && !contratoBloqueado && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-4">
           {contrato ? (
             <Resumen contrato={contrato} />
@@ -424,6 +572,22 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
           onGuardado={refrescar}
         />
       )}
+
+      <ConfirmarModal
+        abierto={Boolean(confirmandoAccionVenta)}
+        titulo={confirmandoAccionVenta === "deshacer" ? "¿Deshacer la venta?" : "¿Marcar vendido?"}
+        mensaje={
+          confirmandoAccionVenta === "deshacer"
+            ? "El vehículo vuelve a estar a la venta y la venta deja de contar en la contabilidad."
+            : `El ${autoVendido ? `${autoVendido.marca} ${autoVendido.modelo}` : "vehículo"} queda vendido a ${pesos(contrato?.permuta?.valor)} y sale del catálogo.`
+        }
+        textoConfirmar={confirmandoAccionVenta === "deshacer" ? "Deshacer venta" : "Marcar vendido"}
+        cargando={cambiandoEstado}
+        onConfirmar={accionVenta}
+        onCancelar={() => setConfirmandoAccionVenta(null)}
+      />
+
+      {financiando && <FinanciacionModal ingreso={ingreso} onCerrar={() => setFinanciando(false)} onGuardado={refrescar} />}
 
       {vendiendo && (
         <VenderModal

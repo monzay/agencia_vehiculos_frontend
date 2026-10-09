@@ -4,12 +4,14 @@ import { DE_QUIEN, FORMAS, cuentaDestino, fecha, fechaLarga, hora, kilometros, o
 import { fechaSinHora } from "../formato";
 
 // El boleto de compraventa de automotor, por duplicado: original para el
-// cliente y duplicado para la agencia. Sirve para las dos modalidades:
+// cliente y duplicado para la agencia. Sirve para todas las modalidades:
 //
 //   - Compra directa: el cliente VENDE su auto a la agencia.
 //   - Parte de pago: la agencia VENDE un auto de su stock al cliente, y el
 //     cliente entrega su usado a cuenta del precio. En los datos, `permuta` es
 //     el auto que vende la agencia y `precio` es el valor asignado al usado.
+//   - Venta sin usado (al contado, o parte de pago sin entregar un usado): la
+//     agencia vende y el cliente paga; `precio` es 0.
 //
 // Cubre lo que un boleto de automotor tiene que dejar escrito: objeto, precio y
 // forma de pago, el momento exacto de la entrega (corta responsabilidades),
@@ -106,14 +108,22 @@ function clausulasCompra(datos) {
   ].filter(Boolean);
 }
 
+// La seña que el comprador pagó antes del boleto: se imputa al precio. Los
+// boletos firmados antes de existir las señas no traen `sena`.
+const senaImputada = (pago) =>
+  pago.sena > 0
+    ? `El comprador abonó con anterioridad, en concepto de seña${pago.senaFecha ? ` el ${fecha(pago.senaFecha)}` : ""}, ${pesosConLetras(pago.sena)}, que se imputa al precio. `
+    : "";
+
 // Quién paga la diferencia entre el precio y el usado. Lo normal es que pague
 // el comprador; si el usado vale más que el auto, la agencia le paga a él.
 function saldoDePrecio(pago, titular) {
-  if (!pago.pagador) return "El valor asignado al usado cubre la totalidad del precio: no queda saldo a abonar.";
+  const sena = senaImputada(pago);
+  if (!pago.pagador) return `${sena}El valor asignado al usado${sena ? " y la seña cubren" : " cubre"} la totalidad del precio: no queda saldo a abonar.`;
   if (pago.pagador === "cliente") {
-    return `El saldo de precio es de ${pesosConLetras(pago.monto)}. ${pagos(pago, "El comprador", titular)}`;
+    return `${sena}El saldo de precio es de ${pesosConLetras(pago.monto)}. ${pagos(pago, "El comprador", titular)}`;
   }
-  return `El valor asignado al usado supera el precio: la agencia abona al comprador la diferencia de ${pesosConLetras(pago.monto)}. ${pagos(pago, "La agencia", titular)}`;
+  return `${sena}El valor asignado al usado supera el precio: la agencia abona al comprador la diferencia de ${pesosConLetras(pago.monto)}. ${pagos(pago, "La agencia", titular)}`;
 }
 
 // Parte de pago: la agencia vende, el cliente compra y entrega su usado a
@@ -160,6 +170,47 @@ function clausulasParteDePago(datos) {
   ].filter(Boolean);
 }
 
+// La agencia vende y el cliente no entrega un usado: paga con plata (y la seña,
+// si hubo).
+function formaDePagoVenta(pago, titular) {
+  const sena = senaImputada(pago);
+  if (!pago.pagador) return `${sena}La seña cubre la totalidad del precio: no queda saldo a abonar.`;
+  return `${sena}${pagos(pago, "El comprador", titular)}`;
+}
+
+function clausulasVentaAgencia(datos) {
+  const c = datos.condiciones;
+  const vendido = c.permuta;
+
+  return [
+    {
+      titulo: "Objeto",
+      texto:
+        "La agencia vende al comprador, y éste compra, el vehículo descripto en el encabezamiento, libre de gravámenes, deudas e inhibiciones, en el estado en que se encuentra, que el comprador declara conocer por haberlo revisado.",
+    },
+    { titulo: "Precio", texto: `El precio total y definitivo de la compraventa es de ${pesosConLetras(vendido.valor)}.` },
+    { titulo: "Forma de pago", texto: formaDePagoVenta(c.pago, datos.titular) },
+    {
+      titulo: "Entrega y responsabilidad",
+      texto: `La agencia entrega la unidad el ${fechaLarga(c.entrega)} a las ${hora(c.entrega)} hs. Hasta ese momento son a su cargo las responsabilidades civiles, penales, administrativas y fiscales derivadas de la unidad; desde ese momento lo son del comprador.`,
+    },
+    {
+      titulo: "Deudas anteriores",
+      texto: "Las patentes, multas e infracciones de la unidad devengadas hasta la entrega son a cargo de la agencia, y las posteriores, del comprador.",
+    },
+    {
+      titulo: "Documentación",
+      texto:
+        "La agencia entrega la documentación de la unidad y se obliga a firmar, con firma certificada, el formulario 08 y todo instrumento necesario para su transferencia.",
+    },
+    {
+      titulo: "Transferencia",
+      texto: `El comprador inscribirá la unidad a su nombre dentro de los ${c.transferencia.dias} días de la entrega, hasta el ${fecha(c.transferencia.vence)} inclusive; vencido el plazo, la agencia podrá ${DENUNCIA}. Los gastos de transferencia son a cargo ${DE_QUIEN[c.transferencia.gastosACargo]}.`,
+    },
+    ...clausulasFinales(c),
+  ].filter(Boolean);
+}
+
 // El auto que vende la agencia, arriba a la derecha, donde en la compra va el
 // usado recibido.
 const bloqueVendido = (v) => ({
@@ -173,9 +224,15 @@ const bloqueVendido = (v) => ({
 
 export function Boleto({ datos, copia, marcaAgua }) {
   const vendido = datos.condiciones.permuta;
-  const conParteDePago = Boolean(vendido);
+  const vendeLaAgencia = Boolean(vendido);
+  // Las copias firmadas antes de existir `conUsado` lo traen undefined: tienen usado.
+  const conParteDePago = vendeLaAgencia && datos.conUsado !== false;
   const copiaTexto = copia.charAt(0).toUpperCase() + copia.slice(1);
-  const clausulas = conParteDePago ? clausulasParteDePago(datos) : clausulasCompra(datos);
+  const clausulas = !vendeLaAgencia
+    ? clausulasCompra(datos)
+    : conParteDePago
+      ? clausulasParteDePago(datos)
+      : clausulasVentaAgencia(datos);
 
   return (
     <Hoja pagina>
@@ -187,7 +244,7 @@ export function Boleto({ datos, copia, marcaAgua }) {
           bajada={conParteDePago ? `Con entrega de usado en parte de pago - ${copiaTexto}` : copiaTexto}
           generado={datos.firmado ?? datos.generado}
         />
-        {conParteDePago ? (
+        {vendeLaAgencia ? (
           <Partes datos={datos} rotuloTitular="Comprador" vehiculo={bloqueVendido(vendido)} />
         ) : (
           <Partes datos={datos} rotuloTitular="Vendedor" />

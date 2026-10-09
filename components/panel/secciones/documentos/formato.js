@@ -1,3 +1,5 @@
+import { vendeLaAgencia } from "./modalidades";
+
 // Cómo se muestran los valores de un papel. Lo usan la ficha, la vista del papel
 // y los impresos, para que una fecha o un monto se lean igual en los tres.
 
@@ -44,3 +46,11 @@ export const cuit = (v) => (v && v.length === 11 ? `${v.slice(0, 2)}-${v.slice(2
 // es de donde salen marca, modelo, año y dominio.
 export const tieneVehiculo = (v) => Boolean(v?.dominio);
 export const tituloVehiculo = (v) => (tieneVehiculo(v) ? `${v.marca} ${v.modelo} ${v.anio}` : "Sin título cargado");
+
+// Cómo se nombra un trámite en la lista: en una venta, por el auto que compra
+// el cliente (aunque entregue un usado); si no, por el auto que recibe la agencia.
+export function vehiculoDelTramite(i) {
+  const a = vendeLaAgencia(i.modalidad) ? i.autoInteres : null;
+  if (!a) return { titulo: tituloVehiculo(i.vehiculo), dominio: i.vehiculo.dominio, conDatos: tieneVehiculo(i.vehiculo) };
+  return { titulo: `${a.marca} ${a.modelo} ${a.anio}`, dominio: a.dominio, conDatos: true };
+}

@@ -10,6 +10,7 @@ import { combinadorClases as cn } from "@/lib/utilidades";
 import { Boton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
 import { Insignia } from "../ui/insignia";
+import { ConsultasVenta } from "./consultas-venta";
 
 const PAGINA = 10; // tamaño del bloque de lazy loading
 
@@ -73,7 +74,30 @@ function tituloConsulta(c) {
   return "Consulta general";
 }
 
-export function SeccionConsultas({ busqueda, mostrarAsesor = true, nuevoDesde = null, abrirId = null }) {
+// Tipo de consulta: las de compra (las del bot de siempre) o las de quienes
+// quieren vender su auto, en venta directa o en consignación.
+const FILTRO_TIPO = [
+  { valor: "compra", label: "Compra" },
+  { valor: "venta", label: "Venta directa" },
+  { valor: "consignacion", label: "Consignación" },
+];
+
+// `nuevoDesdeVenta`: marca de "nuevo" de las consultas de venta/consignación.
+export function SeccionConsultas({ nuevoDesdeVenta = null, ...props }) {
+  const [tipo, setTipo] = useState("compra");
+  return (
+    <div className="space-y-4">
+      <Pills etiqueta="Tipo" opciones={FILTRO_TIPO} valor={tipo} onCambio={setTipo} />
+      {tipo === "compra" ? (
+        <ConsultasCompra {...props} />
+      ) : (
+        <ConsultasVenta key={tipo} modalidad={tipo} busqueda={props.busqueda} nuevoDesde={nuevoDesdeVenta} />
+      )}
+    </div>
+  );
+}
+
+function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, abrirId = null }) {
   // Con la repartición desactivada se oculta quién atiende cada consulta.
   const columnas = mostrarAsesor ? COLUMNAS : COLUMNAS.filter((c) => c.label !== "Asesor asignado");
 

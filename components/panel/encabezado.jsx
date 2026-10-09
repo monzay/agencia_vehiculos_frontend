@@ -10,8 +10,9 @@ const titulos = {
   consultas: { titulo: "Consultas", sub: "Mensajes que van llegando por el bot" },
   clientes: { titulo: "Clientes", sub: "Personas que consultaron por un vehículo" },
   financiacion: { titulo: "Financiación", sub: "Clientes que accedieron a un plan de cuotas" },
-  ventas: { titulo: "Vender / Consignación", sub: "Consultas de venta directa y consignación" },
+  tramites: { titulo: "Trámites", sub: "Crear una seña, consignación, compra o venta" },
   consignaciones: { titulo: "Consignaciones", sub: "Vehículos que la agencia vende por cuenta del dueño" },
+  senas: { titulo: "Señas", sub: "Vehículos reservados antes del trámite" },
   documentos: { titulo: "Documentos", sub: "Consignaciones, partes de pago y compras: papeles, contratos y recibos" },
   vehiculos: { titulo: "Vehículos", sub: "Catálogo y stock de la agencia" },
   descuentos: { titulo: "Descuentos / Promos", sub: "Rebajas y promociones aplicadas" },
@@ -21,7 +22,7 @@ const titulos = {
 };
 
 // Secciones sin lista que filtrar: el buscador no tendría sobre qué actuar.
-const SIN_BUSCADOR = ["resumen"];
+const SIN_BUSCADOR = ["resumen", "tramites"];
 
 export function Encabezado({ seccion, busqueda, onBusqueda, onActualizar, cargando, usuario, onAbrirMenu }) {
   const info = titulos[seccion] ?? { titulo: "Panel", sub: "" };

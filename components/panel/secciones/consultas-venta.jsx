@@ -46,7 +46,9 @@ function tituloVenta(v = {}) {
   return [v.marca, v.modelo, v.anio].filter(Boolean).join(" ") || "Vehículo sin especificar";
 }
 
-export function SeccionVentas({ busqueda, refrescar, nuevoDesde = null }) {
+// Consultas de quienes quieren vender su vehículo, filtradas por `modalidad`
+// (venta | consignacion). Se muestran dentro de Consultas, filtro "Tipo".
+export function ConsultasVenta({ busqueda, modalidad, nuevoDesde = null }) {
   const [expandidoId, setExpandidoId] = useState(null);
   const [detalles, setDetalles] = useState({}); // { [sesionId]: { cargando, respuestas, error } }
   const pedidos = useRef(new Set()); // detalles ya pedidos, para no repetir el fetch
@@ -55,8 +57,8 @@ export function SeccionVentas({ busqueda, refrescar, nuevoDesde = null }) {
   const esNueva = (l) => nuevoDesde && l.venta?.inicio && new Date(l.venta.inicio) > new Date(nuevoDesde);
 
   const { items, total, hayMas, cargandoInicial, cargandoMas, error, cargarMas } = usarListaPaginada(
-    ({ offset, limite }) => obtenerConsultasVenta({ q: busqueda, offset, limite }),
-    [busqueda, refrescar],
+    ({ offset, limite }) => obtenerConsultasVenta({ q: busqueda, modalidad, offset, limite }),
+    [busqueda, modalidad],
     { limite: PAGINA }
   );
 
@@ -104,7 +106,7 @@ export function SeccionVentas({ busqueda, refrescar, nuevoDesde = null }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {cargandoInicial ? "Cargando…" : `Mostrando ${items.length} de ${total} ${total === 1 ? "consulta" : "consultas"} de venta / consignación`}
+        {cargandoInicial ? "Cargando…" : `Mostrando ${items.length} de ${total} ${total === 1 ? "consulta" : "consultas"} de ${modalidad === "consignacion" ? "consignación" : "venta directa"}`}
       </p>
 
       {error && (

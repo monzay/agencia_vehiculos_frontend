@@ -22,4 +22,4 @@ const COMPRAVENTA = {
   desfirmar: desfirmarCompraventaIngreso,
 };
 
-export const CONTRATOS = { consignacion: CONSIGNACION, compra: COMPRAVENTA, permuta: COMPRAVENTA };
+export const CONTRATOS = { consignacion: CONSIGNACION, compra: COMPRAVENTA, permuta: COMPRAVENTA, contado: COMPRAVENTA };

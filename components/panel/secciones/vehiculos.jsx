@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Car, Plus, Pencil, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw, CircleDollarSign, Handshake, Undo2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Car, Plus, Pencil, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw, Handshake, BookmarkCheck } from "lucide-react";
 import {
   crearVehiculo,
   actualizarVehiculo,
-  obtenerVehiculosAdmin,
-  marcarVehiculoVendido,
-  deshacerVentaVehiculo,
   cerrarConsignacionVehiculo,
   getToken,
 } from "@/lib/api";
 import { Overlay } from "../ui/overlay";
-import { VenderModal } from "./vender-modal";
+import { fechaCorta } from "./senas/formato";
 import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
@@ -74,30 +71,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   const [subiendoPrincipal, setSubiendoPrincipal] = useState(false);
   const [subiendoGaleria, setSubiendoGaleria] = useState(false);
 
-  // La lista de arriba solo trae los que siguen a la venta (es lo que el panel
-  // necesita para trabajar). Los vendidos se piden aparte y solo si los mirás:
-  // son historial, no stock.
-  const [vista, setVista] = useState("venta"); // "venta" | "vendidos"
-  const [vendidos, setVendidos] = useState([]);
-  const [recargaVendidos, setRecargaVendidos] = useState(0);
-  const [cargandoVendidos, setCargandoVendidos] = useState(false);
-  const [aVender, setAVender] = useState(null);   // vehículo en el modal de venta
+  // Solo el stock que sigue a la venta. Vender (y deshacer una venta) se hace
+  // en el legajo del trámite, en Documentos: acá no hay vendidos.
   const [cerrando, setCerrando] = useState(null); // ref con una acción en curso
-
-  // Fuente de la tabla según la vista. Filtros, orden y búsqueda trabajan sobre
-  // esto, así sirven igual para el stock y para el historial de ventas.
-  const origen = vista === "vendidos" ? vendidos : vehiculos || [];
-
-  useEffect(() => {
-    if (vista !== "vendidos") return;
-    let activo = true;
-    setCargandoVendidos(true);
-    obtenerVehiculosAdmin("si")
-      .then((v) => { if (activo) setVendidos(v || []); })
-      .catch((e) => { if (activo) setError(e.message); })
-      .finally(() => { if (activo) setCargandoVendidos(false); });
-    return () => { activo = false; };
-  }, [vista, recargaVendidos]);
+  const origen = vehiculos || [];
 
   const editando = editRef != null;
 
@@ -281,48 +258,14 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     }
   }
 
-  // Tras cualquier cierre comercial hay que refrescar las DOS listas: el auto
-  // se mueve de una a la otra.
-  function recargarTodo() {
-    onRecargar?.();
-    setRecargaVendidos((n) => n + 1);
-  }
-
-  async function confirmarVenta({ precioVenta, vendidoAt }) {
-    setCerrando(aVender.ref);
-    setError(null);
-    try {
-      await marcarVehiculoVendido(aVender.ref, { precioVenta, vendidoAt });
-      setAVender(null);
-      recargarTodo();
-    } catch (err) {
-      setError(err.message || "No se pudo marcar como vendido.");
-    } finally {
-      setCerrando(null);
-    }
-  }
-
   async function cerrarConsignacion(v, estado) {
     setCerrando(v.ref);
     setError(null);
     try {
       await cerrarConsignacionVehiculo(v.ref, estado);
-      recargarTodo();
+      onRecargar?.();
     } catch (err) {
       setError(err.message || "No se pudo cerrar la consignación.");
-    } finally {
-      setCerrando(null);
-    }
-  }
-
-  async function deshacerVenta(v) {
-    setCerrando(v.ref);
-    setError(null);
-    try {
-      await deshacerVentaVehiculo(v.ref);
-      recargarTodo();
-    } catch (err) {
-      setError(err.message || "No se pudo deshacer la venta.");
     } finally {
       setCerrando(null);
     }
@@ -372,57 +315,37 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       </span>
     ) : null;
 
+  // Insignia de seña: el auto está reservado y no se ve en el catálogo público.
+  const insigniaSena = (v) =>
+    v.sena ? (
+      <span
+        title={
+          v.sena.estado === "convertida"
+            ? `Señado por ${v.sena.cliente ?? "un cliente"} · ya pasó a trámite`
+            : `Señado por ${v.sena.cliente ?? "un cliente"} hasta el ${fechaCorta(v.sena.vence)}`
+        }
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border text-violet-500 border-violet-500/30 bg-violet-500/10"
+      >
+        <BookmarkCheck className="w-3 h-3" /> Señado
+      </span>
+    ) : null;
+
   const accionesVehiculo = (v) => {
     const ocupado = cerrando === v.ref;
     const spinner = <Loader2 className="w-3.5 h-3.5 animate-spin" />;
 
-    // Ya vendido: la única acción es deshacerlo (se marcó por error).
-    if (v.vendido) {
-      return (
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => deshacerVenta(v)}
-            disabled={ocupado}
-            title="Deshacer venta"
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors disabled:opacity-50"
-          >
-            {ocupado ? spinner : <Undo2 className="w-3.5 h-3.5" />} Deshacer
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div className="flex items-center gap-1.5">
-        {/* Auto de tercero: se cierra el trato, no se "vende" stock propio.
-            Retirado NO es una venta: el dueño se lo llevó. */}
-        {v.consignacion ? (
-          <>
-            <button
-              onClick={() => cerrarConsignacion(v, "vendido")}
-              disabled={ocupado}
-              title={`Vendido · comisión ${v.consignacion.comision}% de ${precioARS(v.consignacion.precio_pactado)}`}
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-            >
-              {ocupado ? spinner : <CircleDollarSign className="w-3.5 h-3.5" />} Vendido
-            </button>
-            <button
-              onClick={() => cerrarConsignacion(v, "retirado")}
-              disabled={ocupado}
-              title="El dueño retiró el vehículo (no es una venta)"
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors disabled:opacity-50"
-            >
-              Retirado
-            </button>
-          </>
-        ) : (
+        {/* Auto de tercero: el dueño se lo puede llevar. Retirado NO es una
+            venta; la venta se marca en el legajo, en Documentos. */}
+        {v.consignacion && (
           <button
-            onClick={() => setAVender(v)}
+            onClick={() => cerrarConsignacion(v, "retirado")}
             disabled={ocupado}
-            title="Marcar como vendido"
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            title="El dueño retiró el vehículo (no es una venta)"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors disabled:opacity-50"
           >
-            {ocupado ? spinner : <CircleDollarSign className="w-3.5 h-3.5" />} Vendido
+            {ocupado && spinner} Retirado
           </button>
         )}
 
@@ -436,27 +359,8 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Por defecto se ve el stock. Los vendidos son historial y solo se
-              cargan si los pedís. */}
-          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border">
-            {[{ k: "venta", l: "A la venta" }, { k: "vendidos", l: "Vendidos" }].map((o) => (
-              <button
-                key={o.k}
-                onClick={() => setVista(o.k)}
-                className={`h-7 px-3 rounded-md text-xs font-medium transition-colors ${
-                  vista === o.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {o.l}
-              </button>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {cargandoVendidos ? "Cargando…" : `${origen.length} ${vista === "vendidos" ? "vendidos" : "en el catálogo"}`}
-          </p>
-        </div>
-        {esAdmin && vista === "venta" && (
+        <p className="text-sm text-muted-foreground">{`${origen.length} en el catálogo`}</p>
+        {esAdmin && (
           <button
             onClick={abrirAlta}
             className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition-opacity"
@@ -564,6 +468,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap items-center gap-1">
                       {insigniaConsignacion(v)}
+                      {insigniaSena(v)}
                       {beneficios(v)}
                     </div>
                   </td>
@@ -617,9 +522,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                   </div>
                 </div>
               </button>
-              {(v.descuento || (v.promociones || []).length > 0) && (
+              {(v.descuento || (v.promociones || []).length > 0 || v.sena) && (
                 <div className="px-3 pb-2 flex flex-wrap items-center gap-1">
                   {insigniaConsignacion(v)}
+                  {insigniaSena(v)}
                   {beneficios(v)}
                 </div>
               )}
@@ -862,14 +768,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
         </Overlay>
       )}
 
-      {aVender && (
-        <VenderModal
-          vehiculo={aVender}
-          cargando={cerrando === aVender.ref}
-          onConfirmar={confirmarVenta}
-          onCancelar={() => setAVender(null)}
-        />
-      )}
+
     </div>
   );
 }

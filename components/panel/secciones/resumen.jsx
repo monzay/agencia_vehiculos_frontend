@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Users, Flame, Thermometer, Snowflake, Tag, MessageSquare, Eye } from "lucide-react";
 import { TarjetaMetrica } from "../tarjeta-metrica";
-import { obtenerMetricas } from "@/lib/api";
+import { obtenerMetricas, obtenerGastoIa } from "@/lib/api";
+import { GastoIa } from "./gasto-ia";
 
 const COLORES = { CALIENTE: "var(--destructive)", TIBIO: "var(--warning)", FRIO: "var(--chart-1)" };
 
@@ -24,9 +25,12 @@ const MetricasResumen = dynamic(() => import("./metricas-resumen"), { ssr: false
 
 export function SeccionResumen({ resumen }) {
   const [metricas, setMetricas] = useState(null);
+  // Solo admin: para el asesor la API responde 403 y el contador no se muestra.
+  const [gastoIa, setGastoIa] = useState(null);
 
   useEffect(() => {
     obtenerMetricas().then(setMetricas).catch(() => setMetricas(null));
+    obtenerGastoIa().then(setGastoIa).catch(() => setGastoIa(null));
   }, []);
 
   // Consultas acumuladas: la serie anual de `fluctuacion` no tiene recorte
@@ -50,16 +54,18 @@ export function SeccionResumen({ resumen }) {
 
   return (
     <div className="space-y-6">
+      <GastoIa datos={gastoIa} />
+
       {/* KPIs generales */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Resumen general</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <TarjetaMetrica titulo="Total clientes" valor={resumen?.total ?? 0} icon={Users} color="text-foreground" delay={0} />
-        <TarjetaMetrica titulo="Consultas calientes" valor={consultas.CALIENTE} icon={Flame} color="text-destructive" delay={1} />
-        <TarjetaMetrica titulo="Consultas tibias" valor={consultas.TIBIO} icon={Thermometer} color="text-warning" delay={2} />
-        <TarjetaMetrica titulo="Consultas frías" valor={consultas.FRIO} icon={Snowflake} color="text-chart-1" delay={3} />
-        <TarjetaMetrica titulo="Quieren vender" valor={metricas?.ventasTotal ?? resumen?.ventas ?? 0} icon={Tag} color="text-chart-5" delay={4} />
-        <TarjetaMetrica titulo="Consultas totales" valor={consultas.total} icon={MessageSquare} color="text-foreground" delay={5} />
+        <TarjetaMetrica titulo="Consultas totales" valor={consultas.total} icon={MessageSquare} color="text-foreground" delay={1} />
+        <TarjetaMetrica titulo="Consultas calientes" valor={consultas.CALIENTE} icon={Flame} color="text-destructive" delay={2} />
+        <TarjetaMetrica titulo="Consultas tibias" valor={consultas.TIBIO} icon={Thermometer} color="text-warning" delay={3} />
+        <TarjetaMetrica titulo="Consultas frías" valor={consultas.FRIO} icon={Snowflake} color="text-chart-1" delay={4} />
+        <TarjetaMetrica titulo="Quieren vender" valor={metricas?.ventasTotal ?? resumen?.ventas ?? 0} icon={Tag} color="text-chart-5" delay={5} />
         <TarjetaMetrica titulo="Visitas totales" valor={metricas?.vistasTotal ?? 0} icon={Eye} color="text-success" delay={6} />
         </div>
       </div>
@@ -68,7 +74,7 @@ export function SeccionResumen({ resumen }) {
       {metricas && (
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-3">Hoy</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             <TarjetaMetrica titulo="Clientes hoy" valor={metricas.hoy.clientes} icon={Users} color="text-foreground" delay={0} />
             <TarjetaMetrica titulo="Consultas hoy" valor={metricas.hoy.consultas} icon={MessageSquare} color="text-foreground" delay={1} />
             <TarjetaMetrica titulo="Calientes hoy" valor={metricas.hoy.calientes} icon={Flame} color="text-destructive" delay={2} />

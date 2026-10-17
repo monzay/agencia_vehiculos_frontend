@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Upload, Trash2, Loader2, ImageOff } from "lucide-react";
-import { obtenerEntregas, crearEntrega, eliminarEntrega, getToken } from "@/lib/api";
+import { Upload, Trash2, Loader2, ImageOff, UserRound } from "lucide-react";
+import { obtenerEntregasGestion, crearEntrega, eliminarEntrega, getToken } from "@/lib/api";
 import { Boton } from "../ui/boton";
 import { ConfirmarModal } from "../ui/confirmar-modal";
+import { ElegirClienteEntrega } from "./entregas-cliente";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -36,11 +37,12 @@ export function SeccionEntregas() {
   const [subiendo, setSubiendo] = useState(false);
   const [aBorrar, setABorrar] = useState(null);
   const [borrando, setBorrando] = useState(false);
+  const [cliente, setCliente] = useState(null); // quien recibió el auto de las fotos que se suben
   const inputRef = useRef(null);
 
   useEffect(() => {
     let activo = true;
-    obtenerEntregas()
+    obtenerEntregasGestion()
       .then((datos) => activo && setEntregas(datos || []))
       .catch((e) => activo && (setEntregas([]), setError(e.message)));
     return () => {
@@ -48,18 +50,18 @@ export function SeccionEntregas() {
     };
   }, []);
 
-  // Sube una o varias fotos en orden y las agrega a la galería.
+  // Sube una o varias fotos en orden, todas del cliente elegido, y las agrega a la galería.
   async function alElegirArchivos(e) {
     const files = [...(e.target.files || [])];
     e.target.value = ""; // permite volver a elegir el mismo archivo
-    if (!files.length) return;
+    if (!files.length || !cliente) return;
 
     setSubiendo(true);
     setError(null);
     try {
       for (const file of files) {
         const url = await subirArchivo(file);
-        const creada = await crearEntrega(url);
+        const creada = await crearEntrega(url, cliente.id);
         setEntregas((prev) => [creada, ...(prev || [])]);
       }
     } catch (err) {
@@ -91,11 +93,22 @@ export function SeccionEntregas() {
             ? "Cargando…"
             : `${entregas.length} ${entregas.length === 1 ? "foto" : "fotos"} en la galería del home`}
         </p>
-        <Boton variante="primario" className="gap-1.5" cargando={subiendo} onClick={() => inputRef.current?.click()}>
+        <Boton
+          variante="primario"
+          className="gap-1.5"
+          cargando={subiendo}
+          disabled={!cliente}
+          onClick={() => inputRef.current?.click()}
+        >
           {!subiendo && <Upload className="w-4 h-4" />}
           {subiendo ? "Subiendo…" : "Subir fotos"}
         </Boton>
         <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={alElegirArchivos} />
+      </div>
+
+      <div className="max-w-md space-y-1.5">
+        <ElegirClienteEntrega cliente={cliente} onElegir={setCliente} />
+        {!cliente && <p className="text-xs text-muted-foreground">Elegí el cliente para poder subir las fotos de su entrega.</p>}
       </div>
 
       {error && (
@@ -116,7 +129,13 @@ export function SeccionEntregas() {
           {entregas.map((entrega) => (
             <figure key={entrega.id} className="group relative m-0 aspect-video overflow-hidden rounded-xl border border-border bg-secondary">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={entrega.url} alt="Entrega" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={entrega.url} alt={entrega.cliente ? `Entrega a ${entrega.cliente.nombre}` : "Entrega"} className="absolute inset-0 w-full h-full object-cover" />
+              {entrega.cliente && (
+                <figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-black/55 px-2 py-1 text-xs text-white">
+                  <UserRound className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{entrega.cliente.nombre}</span>
+                </figcaption>
+              )}
               <button
                 type="button"
                 onClick={() => setABorrar(entrega)}

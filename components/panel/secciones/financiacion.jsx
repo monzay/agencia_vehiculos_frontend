@@ -17,6 +17,7 @@ import { Modal, ModalPie } from "../ui/modal";
 import { Campo, CampoNumero, CLASE_INPUT } from "../ui/campo";
 import { Insignia } from "../ui/insignia";
 import { ConfirmarModal } from "../ui/confirmar-modal";
+import { EtiquetaAviso, IconosRespuestas, RespuestasCliente } from "./financiacion-alertas";
 
 const FORM_VACIO = {
   nombre: "",
@@ -27,6 +28,7 @@ const FORM_VACIO = {
   cantidadCuotas: "",
   precioCuota: "",
   diaPago: "1",
+  avisosWhatsapp: true,
 };
 
 const COLUMNAS = [
@@ -101,6 +103,7 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
       cantidadCuotas: String(f.cantidadCuotas ?? ""),
       precioCuota: String(f.precioCuota ?? ""),
       diaPago: String(f.diaPago ?? "1"),
+      avisosWhatsapp: !f.avisosBaja,
     });
     setError(null);
     setAbierto(true);
@@ -194,36 +197,49 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
   );
 
   const panelDatos = (f) => (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Grupo titulo="Identidad">
-        <Item label="Teléfono">{f.telefono || "—"}</Item>
-        <Item label="Tel. alt.">{f.telefonoAlt || "—"}</Item>
-        <Item label="Email">{f.email || "—"}</Item>
-        <Item label="DNI">{f.dni || "—"}</Item>
-      </Grupo>
-      <Grupo titulo="Plan">
-        <Item label="Cuotas">{f.cantidadCuotas}</Item>
-        <Item label="Precio cuota">{money.format(f.precioCuota)}</Item>
-        <Item label="Día de pago">{f.diaPago}</Item>
-        <Item label="Total">{money.format(f.montoTotal)}</Item>
-      </Grupo>
-      <Grupo titulo="Montos">
-        <Item label="Pagadas">{f.cuotasPagadas}/{f.cantidadCuotas}</Item>
-        <Item label="Pagado">{money.format(f.montoPagado)}</Item>
-        <Item label="Saldo">{money.format(f.saldo)}</Item>
-      </Grupo>
-      <Grupo titulo="Fechas">
-        <Item label="Próxima cuota">
-          {f.proximaCuota
-            ? `Cuota ${f.proximaCuota.numero} · ${fechaCorta(f.proximaCuota.vencimiento)}`
-            : f.completada ? "Completada" : "—"}
-        </Item>
-        <Item label="Finaliza">{fechaCorta(f.fechaFin)}</Item>
-        <Item label="Creada">{fechaCorta(f.creado)}</Item>
-        <Item label="Actualizada">{fechaCorta(f.actualizado)}</Item>
-      </Grupo>
+    <div className="space-y-3">
+      <RespuestasCliente respuestas={f.respuestas} onAtendida={recargar} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Grupo titulo="Identidad">
+          <Item label="Teléfono">{f.telefono || "—"}</Item>
+          <Item label="Tel. alt.">{f.telefonoAlt || "—"}</Item>
+          <Item label="Email">{f.email || "—"}</Item>
+          <Item label="DNI">{f.dni || "—"}</Item>
+        </Grupo>
+        <Grupo titulo="Plan">
+          <Item label="Cuotas">{f.cantidadCuotas}</Item>
+          <Item label="Precio cuota">{money.format(f.precioCuota)}</Item>
+          <Item label="Día de pago">{f.diaPago}</Item>
+          <Item label="Total">{money.format(f.montoTotal)}</Item>
+          <Item label="Avisos WhatsApp">{f.avisosBaja ? `Baja desde ${fechaCorta(f.avisosBaja)}` : "Activos"}</Item>
+        </Grupo>
+        <Grupo titulo="Montos">
+          <Item label="Pagadas">{f.cuotasPagadas}/{f.cantidadCuotas}</Item>
+          <Item label="Pagado">{money.format(f.montoPagado)}</Item>
+          <Item label="Saldo">{money.format(f.saldo)}</Item>
+        </Grupo>
+        <Grupo titulo="Fechas">
+          <Item label="Próxima cuota">
+            {f.proximaCuota
+              ? `Cuota ${f.proximaCuota.numero} · ${fechaCorta(f.proximaCuota.vencimiento)}`
+              : f.completada ? "Completada" : "—"}
+          </Item>
+          <Item label="Finaliza">{fechaCorta(f.fechaFin)}</Item>
+          <Item label="Creada">{fechaCorta(f.creado)}</Item>
+          <Item label="Actualizada">{fechaCorta(f.actualizado)}</Item>
+        </Grupo>
+      </div>
     </div>
   );
+
+  // Etiqueta del aviso en curso y un ícono por cada respuesta del cliente.
+  const marcasDeAviso = (f) =>
+    (f.proximoAviso || f.respuestas?.length > 0) && (
+      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+        <EtiquetaAviso aviso={f.proximoAviso} />
+        <IconosRespuestas respuestas={f.respuestas} />
+      </div>
+    );
 
   return (
     <div className="space-y-4">
@@ -253,13 +269,14 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
             const abierto = expandidoId === f.id;
             return (
               <Fragment key={f.id}>
-                <tr onClick={() => setExpandidoId(abierto ? null : f.id)} className={`${FILA} cursor-pointer`}>
+                <tr onClick={() => setExpandidoId(abierto ? null : f.id)} className={`${FILA} cursor-pointer ${f.proximoAviso ? "bg-amber-500/5" : ""}`}>
                   <td className={`${CELDA} text-muted-foreground`}>
                     {abierto ? <ChevronDown className="w-4 h-4 text-accent" /> : <ChevronRight className="w-4 h-4" />}
                   </td>
                   <td className={CELDA}>
                     <p className="font-medium text-foreground">{f.nombre || "—"}</p>
                     {f.telefono && <p className="text-xs text-muted-foreground mt-0.5">{f.telefono}</p>}
+                    {marcasDeAviso(f)}
                   </td>
                   <td className={`${CELDA} text-foreground`}>
                     <p>
@@ -304,12 +321,13 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
           items.map((f) => {
             const abierto = expandidoId === f.id;
             return (
-              <div key={f.id} className="rounded-xl border border-border bg-card overflow-hidden">
+              <div key={f.id} className={`rounded-xl border bg-card overflow-hidden ${f.proximoAviso ? "border-amber-500/40" : "border-border"}`}>
                 <button type="button" onClick={() => setExpandidoId(abierto ? null : f.id)} className="w-full text-left p-3 hover:bg-secondary/40 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-foreground truncate">{f.nombre || "—"}</p>
                       {f.telefono && <p className="text-xs text-muted-foreground mt-0.5">{f.telefono}</p>}
+                      {marcasDeAviso(f)}
                     </div>
                     {abierto ? <ChevronDown className="w-4 h-4 text-accent shrink-0 mt-0.5" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />}
                   </div>
@@ -393,6 +411,19 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
                 </select>
               </label>
             </div>
+
+            <label className="flex items-start gap-2.5 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.avisosWhatsapp}
+                onChange={(e) => cambiar("avisosWhatsapp", e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-current"
+              />
+              <span>
+                Recibe recordatorios de cuota por WhatsApp
+                <span className="block text-xs text-muted-foreground">3 días antes, 1 día antes y el día del vencimiento. Se apaga solo si el cliente responde BAJA.</span>
+              </span>
+            </label>
 
             {form.cantidadCuotas && form.precioCuota && (
               <p className="text-xs text-muted-foreground">

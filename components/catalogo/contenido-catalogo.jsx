@@ -5,12 +5,11 @@ import { EncabezadoSeccion } from "@/components/inicio/encabezado-seccion";
 import { TarjetaVehiculo } from "@/components/inicio/tarjeta-vehiculo";
 import { filtrarVehiculos, obtenerMarcasFiltradas } from "@/lib/vehiculos";
 import { obtenerVehiculos } from "@/lib/api";
-import { Car, Bike } from "lucide-react";
+import { TIPOS_VEHICULO } from "@/lib/tipos-vehiculo";
 
 const TIPOS = [
   { value: "todos", label: "Todos" },
-  { value: "auto",  label: "Autos",  icon: Car },
-  { value: "moto",  label: "Motos",  icon: Bike },
+  ...TIPOS_VEHICULO.map((t) => ({ value: t.valor, label: t.plural, icon: t.icono })),
 ];
 
 const CONDICIONES = [

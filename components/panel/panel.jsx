@@ -244,7 +244,7 @@ export function Panel({ consultaId = null }) {
               {seccion === "consignaciones" && (
                 <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
               )}
-              {seccion === "senas" && (
+              {seccion === "senas" && esAdmin && (
                 <SeccionSenas
                   busqueda={busqueda}
                   esAdmin={esAdmin}
@@ -254,7 +254,7 @@ export function Panel({ consultaId = null }) {
                   }}
                 />
               )}
-              {seccion === "documentos" && (
+              {seccion === "documentos" && esAdmin && (
                 <SeccionDocumentos
                   key={tramiteAAbrir?.id ?? "documentos"}
                   busqueda={busqueda}
@@ -263,7 +263,7 @@ export function Panel({ consultaId = null }) {
                 />
               )}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
-              {seccion === "contabilidad" && <SeccionContabilidad />}
+              {seccion === "contabilidad" && esAdmin && <SeccionContabilidad />}
               {seccion === "descuentos" && (
                 <SeccionDescuentos
                   descuentos={descuentos}

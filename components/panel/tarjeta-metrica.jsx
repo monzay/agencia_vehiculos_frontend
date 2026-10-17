@@ -10,9 +10,9 @@ export function TarjetaMetrica({ titulo, valor, subtitulo, icon: Icon, color = "
       className="group bg-card border border-border rounded-xl p-5 shadow-[var(--shadow-sm)] hover:border-foreground/20 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-2"
       style={{ animationDelay: `${delay * 60}ms`, animationFillMode: "both" }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{titulo}</span>
-        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <span className="min-w-0 text-xs text-muted-foreground font-medium uppercase tracking-wide">{titulo}</span>
+        <div className="w-8 h-8 shrink-0 rounded-lg bg-secondary flex items-center justify-center">
           <Icon className={cn("w-4 h-4", color)} />
         </div>
       </div>

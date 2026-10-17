@@ -3,15 +3,16 @@ import { NextResponse } from "next/server";
 // Link de captación de un asesor: `/a/agustina`.
 //
 // El asesor lo publica en sus redes. Acá NO se manda a WhatsApp: se deja una
-// marca en el navegador y se lo suelta en la portada, para que recorra el
-// catálogo como cualquier visitante. Cuando toque "Consultar", el mensaje sale
+// marca en el navegador y se lo lleva directo al catálogo (pedido del 13/10/2026),
+// para que vea los autos de entrada. Cuando toque "Consultar", el mensaje sale
 // con el código del asesor adentro (ver lib/constantes.js) y el bot le atribuye
 // la consulta en vez de repartirla por carga.
 //
-// Si el slug no existe o el asesor está inactivo, igual se lo manda a la
-// portada, sin marca: un cliente que llega por un link viejo tiene que ver el
+// Si el slug no existe o el asesor está inactivo, igual se lo manda al
+// catálogo, sin marca: un cliente que llega por un link viejo tiene que ver el
 // sitio, no un 404. El costo es que un link mal escrito pierde la atribución en
 // silencio, y por eso el panel muestra el link ya armado para copiar.
+const DESTINO = "/catalogo";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Ventana de atribución: cuánto vale el link después de que el cliente entra.
@@ -21,7 +22,7 @@ const MINUTOS = 30;
 
 export async function GET(request, { params }) {
   const { slug } = await params;
-  const respuesta = NextResponse.redirect(new URL("/", request.url));
+  const respuesta = NextResponse.redirect(new URL(DESTINO, request.url));
 
   try {
     const res = await fetch(`${API_URL}/api/asesores/slug/${encodeURIComponent(slug)}`, {

@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
-  Phone, Car, Tag, User, UserCheck, Loader2, ChevronRight, ChevronDown, HelpCircle, CheckCircle2, Circle, MapPin,
+  Phone, Car, Tag, User, UserCheck, Loader2, ChevronRight, ChevronDown, HelpCircle, CheckCircle2, Circle, MapPin, BellRing,
 } from "lucide-react";
 import { obtenerConsultas, obtenerConsulta, marcarConsultaAtendida } from "@/lib/api";
 import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
@@ -48,6 +48,18 @@ function Pills({ etiqueta, opciones, valor, onCambio }) {
 
 const CANAL_VARIANTE = { whatsapp: "exito", instagram: "peligro", facebook: "info", web: "neutral" };
 const CLASIF_VARIANTE = { CALIENTE: "peligro", TIBIO: "alerta", FRIO: "info" };
+const CLASIF_TEXTO = { EN_CALIFICACION: "En calificación" };
+
+// Aviso del agente con IA para el vendedor: lo derivó o acordó una visita.
+function AvisoVendedor({ aviso }) {
+  if (!aviso) return null;
+  return (
+    <span className="mt-1 inline-flex items-start gap-1.5 text-xs font-medium text-amber-600">
+      <BellRing className="w-3.5 h-3.5 shrink-0 mt-px" />
+      <span className="break-words">{aviso.motivo || "Requiere un vendedor"}</span>
+    </span>
+  );
+}
 
 const COLUMNAS = [
   { label: "Vehículo de interés" },
@@ -251,6 +263,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                         <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">Nuevo</span>
                       )}
                     </span>
+                    <div className="pl-6"><AvisoVendedor aviso={getAtendido(c) ? null : c.requiereVendedor} /></div>
                   </td>
                   <td className={CELDA}>
                     <span className="inline-flex items-center gap-1.5 text-foreground">
@@ -287,7 +300,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                   </td>
                   <td className={`${CELDA} whitespace-nowrap`}>
                     {c.clasificacion ? (
-                      <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{c.clasificacion}</Insignia>
+                      <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{CLASIF_TEXTO[c.clasificacion] ?? c.clasificacion}</Insignia>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -333,9 +346,10 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                   <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1.5">
                     <User className="w-3 h-3" /> {c.nombre || "Sin nombre"}
                   </p>
+                  <AvisoVendedor aviso={getAtendido(c) ? null : c.requiereVendedor} />
 
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {c.clasificacion && <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{c.clasificacion}</Insignia>}
+                    {c.clasificacion && <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{CLASIF_TEXTO[c.clasificacion] ?? c.clasificacion}</Insignia>}
                     {mostrarAsesor && (c.asesor
                       ? <Insignia variante="info"><UserCheck className="w-3 h-3" /> {c.asesor}</Insignia>
                       : <span className="text-xs text-muted-foreground">Sin asignar</span>)}

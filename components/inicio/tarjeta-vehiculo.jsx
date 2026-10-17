@@ -1,7 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Gauge, ArrowRight, Car, Bike, Flame, Zap } from "lucide-react";
+import { Calendar, Gauge, ArrowRight, Flame, Zap } from "lucide-react";
+import { tipoVehiculo } from "@/lib/tipos-vehiculo";
 import { Boton } from "@/components/interfaz/boton";
 import { usarEnVista } from "@/hooks/usar-en-vista";
 import {
@@ -26,6 +27,8 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
   const { ref, estaVisible } = usarEnVista();
 
   const nombre = obtenerNombreCompletoVehiculo(vehicle);
+  const tipo = tipoVehiculo(vehicle.tipo);
+  const IconoTipo = tipo.icono;
   const sinKms = vehicle.condicion === "usado" && vehicle.kms === 0;
   // La API ya descarta los descuentos y promos vencidos: lo que llega, rige.
   const descuento = vehicle.ahorro > 0 ? vehicle.descuento : null;
@@ -61,8 +64,8 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
               </span>
             )}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-background/80 backdrop-blur-sm text-foreground">
-              {vehicle.tipo === "moto" ? <Bike className="w-3 h-3" /> : <Car className="w-3 h-3" />}
-              {vehicle.tipo === "moto" ? "Moto" : "Auto"}
+              <IconoTipo className="w-3 h-3" />
+              {tipo.label}
             </span>
           </div>
         </Link>

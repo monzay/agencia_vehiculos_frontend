@@ -29,15 +29,20 @@ const COLUMNA_ACCIONES = { label: "Acciones", alinear: "right" };
 // Link de captación del asesor: el que publica en sus redes para que las
 // consultas que entren por ahí queden atribuidas a él.
 //
-// Se muestra la ruta corta —legible y dictable por teléfono— pero se copia la
-// URL absoluta, que es lo que sirve pegar. El origen se resuelve recién al
-// copiar porque en el servidor no hay `window`.
+// El link sale siempre con el dominio público de la web (NEXT_PUBLIC_SITE_URL),
+// aunque el panel se use desde otra dirección: es lo que el asesor publica.
+// Sin la variable se usa el origen actual; se resuelve recién al copiar porque
+// en el servidor no hay `window`.
+// Quien entra por el link cae directo en el catálogo (ver app/a/[slug]/route.js).
+const SITIO = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+const DOMINIO_VISIBLE = SITIO.replace(/^https?:\/\//, "");
+
 function LinkCaptacion({ slug }) {
   const [copiado, setCopiado] = useState(false);
   if (!slug) return null;
 
   const copiar = async () => {
-    const url = `${window.location.origin}/a/${slug}`;
+    const url = `${SITIO || window.location.origin}/a/${slug}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
@@ -68,7 +73,7 @@ function LinkCaptacion({ slug }) {
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1 font-mono text-[11px] text-foreground"
         >
           <Link2 className="w-3 h-3 shrink-0 text-accent" />
-          /a/{slug}
+          {DOMINIO_VISIBLE}/a/{slug}
         </span>
         <Boton
           variante={copiado ? "primario" : "secundario"}

@@ -11,6 +11,7 @@ import {
 import { Overlay } from "../ui/overlay";
 import { fechaCorta } from "./senas/formato";
 import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
+import { TIPOS_VEHICULO, tipoVehiculo } from "@/lib/tipos-vehiculo";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -582,8 +583,11 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     onChange={(e) => cambiar("tipoVehiculo", e.target.value)}
                     className="w-full h-9 px-2 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-accent"
                   >
-                    <option value="auto">Auto</option>
-                    <option value="moto">Moto</option>
+                    {TIPOS_VEHICULO.map((t) => (
+                      <option key={t.valor} value={t.valor}>
+                        {t.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="block">
@@ -721,7 +725,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 {detalle.dominio && <Dato label="Dominio">{detalle.dominio}</Dato>}
                 <Dato label="Stock">{detalle.stock ?? 0} {detalle.stock === 1 ? "unidad" : "unidades"}</Dato>
                 <Dato label="Condición">{detalle.condicion === "0km" ? "0 km" : "Usado"}</Dato>
-                <Dato label="Tipo">{detalle.tipo === "moto" ? "Moto" : "Auto"}</Dato>
+                <Dato label="Tipo">{tipoVehiculo(detalle.tipo).label}</Dato>
                 {detalle.combustible && <Dato label="Combustible">{detalle.combustible}</Dato>}
                 <Dato label="Disponible">{detalle.disponible ? "Sí" : "No"}</Dato>
                 <Dato label="Precio">

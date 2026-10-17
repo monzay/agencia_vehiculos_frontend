@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Car, Bike, Package } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Package } from "lucide-react";
+import { tipoVehiculo } from "@/lib/tipos-vehiculo";
 import { Boton } from "@/components/interfaz/boton";
 import {
   obtenerNombreCompletoVehiculo,
@@ -117,6 +118,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
   const sinKm = vehiculo.condicion === "usado" && vehiculo.kms === 0;
   const descuento = vehiculo.ahorro > 0 ? vehiculo.descuento : null;
   const promos = vehiculo.promociones ?? [];
+  const tipo = tipoVehiculo(vehiculo.tipo);
   const nombreAgencia = useNombreAgencia();
 
   const abrirBot = () =>
@@ -143,8 +145,8 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
               </span>
             )}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-background/80 backdrop-blur-sm text-foreground">
-              {vehiculo.tipo === "moto" ? <Bike className="w-3 h-3" /> : <Car className="w-3 h-3" />}
-              {vehiculo.tipo === "moto" ? "Moto" : "Auto"}
+              <tipo.icono className="w-3 h-3" />
+              {tipo.label}
             </span>
           </div>
         </div>
@@ -181,7 +183,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
             {sinKm ? "0 km" : `${vehiculo.kms.toLocaleString("es-AR")} km`}
           </Especificacion>
           <Especificacion icon={Fuel} rotulo="Combustible">{COMBUSTIBLE[vehiculo.combustible] ?? "—"}</Especificacion>
-          <Especificacion icon={vehiculo.tipo === "moto" ? Bike : Car} rotulo="Condición">
+          <Especificacion icon={tipo.icono} rotulo="Condición">
             {vehiculo.condicion === "0km" ? "0 km" : "Usado"}
           </Especificacion>
           {vehiculo.color && (

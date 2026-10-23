@@ -4,7 +4,7 @@ import { BotonWhatsApp } from "@/components/inicio/boton-whatsapp";
 import { ContenidoCatalogo } from "@/components/catalogo/contenido-catalogo";
 
 const metadata = {
-  title: "Catálogo de Vehículos | Sea Automotores",
+  title: "Catálogo de Vehículos | Ortega Automotores",
   description:
     "Explorá nuestro catálogo completo de vehículos nuevos y usados. Todos verificados y con garantía.",
 };

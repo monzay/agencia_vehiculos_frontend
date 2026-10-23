@@ -69,7 +69,7 @@ function SeccionHeroe() {
       >
         <Image
           src="/images/showroom.png"
-          alt="Showroom de SEA Automotores con vehículos en exhibición"
+          alt="Showroom de Ortega Automotores con vehículos en exhibición"
           fill
           priority
           sizes="100vw"

@@ -1,7 +1,7 @@
 import { FormularioLogin } from "@/components/formulario-login";
 
 export const metadata = {
-  title: "Iniciar sesión | SEA Automotores",
+  title: "Iniciar sesión | Ortega Automotores",
 };
 
 export default function PaginaLogin() {

@@ -4,7 +4,7 @@ import { BotonWhatsApp } from "@/components/inicio/boton-whatsapp";
 import { DetalleVehiculo } from "@/components/catalogo/detalle-vehiculo";
 
 const metadata = {
-  title: "Detalle del vehículo | Sea Automotores",
+  title: "Detalle del vehículo | Ortega Automotores",
   description:
     "Ficha completa del vehículo: fotos, ficha técnica, precio y beneficios vigentes.",
 };

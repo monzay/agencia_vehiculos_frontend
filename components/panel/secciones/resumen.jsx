@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Users, Flame, Thermometer, Snowflake, Tag, MessageSquare, Eye } from "lucide-react";
 import { TarjetaMetrica } from "../tarjeta-metrica";
-import { obtenerMetricas, obtenerGastoIa } from "@/lib/api";
-import { GastoIa } from "./gasto-ia";
+import { obtenerMetricas } from "@/lib/api";
 
 const COLORES = { CALIENTE: "var(--destructive)", TIBIO: "var(--warning)", FRIO: "var(--chart-1)" };
 
@@ -25,12 +24,10 @@ const MetricasResumen = dynamic(() => import("./metricas-resumen"), { ssr: false
 
 export function SeccionResumen({ resumen }) {
   const [metricas, setMetricas] = useState(null);
-  // Solo admin: para el asesor la API responde 403 y el contador no se muestra.
-  const [gastoIa, setGastoIa] = useState(null);
 
+  // El gasto de IA y los mensajes de WhatsApp están en Límites de costos (solo admin).
   useEffect(() => {
     obtenerMetricas().then(setMetricas).catch(() => setMetricas(null));
-    obtenerGastoIa().then(setGastoIa).catch(() => setGastoIa(null));
   }, []);
 
   // Consultas acumuladas: la serie anual de `fluctuacion` no tiene recorte
@@ -54,8 +51,6 @@ export function SeccionResumen({ resumen }) {
 
   return (
     <div className="space-y-6">
-      <GastoIa datos={gastoIa} />
-
       {/* KPIs generales */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Resumen general</h3>

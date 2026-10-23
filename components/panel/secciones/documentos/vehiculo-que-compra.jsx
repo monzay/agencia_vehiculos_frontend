@@ -51,7 +51,7 @@ export function VehiculoQueCompra({ valor, onCambio, ingresoId = null, actual = 
       </div>
       {elegido && <Detalle auto={elegido} />}
       {elegido && !elegido.dominio && (
-        <Aviso tono="alerta">Este vehículo no tiene dominio cargado: se puede crear el trámite, pero antes del boleto hay que completarlo en Vehículos → Editar.</Aviso>
+        <Aviso tono="alerta">Este vehículo no tiene dominio cargado: se puede crear el trámite, y el dominio, el motor y el chasis se completan al armar el boleto.</Aviso>
       )}
     </div>
   );

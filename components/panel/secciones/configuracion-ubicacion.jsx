@@ -97,7 +97,7 @@ export function TarjetaUbicacion({ ubicacion, onUbicacion }) {
         <CardContent className="space-y-5">
           <div className="grid gap-2">
             <Label htmlFor="ubi-nombre">Nombre del local</Label>
-            <Input id="ubi-nombre" value={form.nombre} onChange={campo("nombre")} placeholder="SEA Automotores" />
+            <Input id="ubi-nombre" value={form.nombre} onChange={campo("nombre")} placeholder="Ortega Automotores" />
           </div>
 
           <div className="grid gap-2">

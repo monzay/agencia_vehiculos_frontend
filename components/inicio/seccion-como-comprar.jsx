@@ -78,7 +78,7 @@ function SeccionComoComprar() {
             <div className="relative aspect-4/3 lg:aspect-[3/4] overflow-hidden bg-secondary lg:sticky lg:top-28">
               <Image
                 src="/images/showroom-camioneta.png"
-                alt="Camioneta en exhibición en el showroom de SEA Automotores"
+                alt="Camioneta en exhibición en el showroom de Ortega Automotores"
                 fill
                 sizes="(max-width: 1024px) 100vw, 40vw"
                 className="object-cover"

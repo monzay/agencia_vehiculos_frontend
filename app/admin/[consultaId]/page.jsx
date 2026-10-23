@@ -1,7 +1,7 @@
 import { Panel } from "@/components/panel/panel";
 
 const metadata = {
-  title: "Consulta | SEA Automotores",
+  title: "Consulta | Ortega Automotores",
   description: "Detalle de una consulta puntual del panel de administración.",
 };
 

@@ -1,7 +1,7 @@
 import { Panel } from "@/components/panel/panel";
 
 const metadata = {
-  title: "Panel de administración | SEA Automotores",
+  title: "Panel de administración | Ortega Automotores",
   description:
     "Dashboard de leads: clientes que consultaron, ventas (quieren vender su vehículo) y clasificación.",
 };

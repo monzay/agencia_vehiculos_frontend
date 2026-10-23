@@ -106,7 +106,7 @@ function SeccionEntregas() {
               <div className={MARCO}>
                 <img
                   src={entrega.url}
-                  alt="Entrega de un vehículo en el showroom de SEA Automotores"
+                  alt="Entrega de un vehículo en el showroom de Ortega Automotores"
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                 />
@@ -136,7 +136,7 @@ function SeccionEntregas() {
           <div className="relative max-w-4xl w-full mx-4 sm:mx-8" onClick={(e) => e.stopPropagation()}>
             <img
               src={ampliada.url}
-              alt="Entrega de un vehículo en el showroom de SEA Automotores"
+              alt="Entrega de un vehículo en el showroom de Ortega Automotores"
               className="w-full h-auto max-h-[85vh] object-contain rounded-xl"
             />
             <button

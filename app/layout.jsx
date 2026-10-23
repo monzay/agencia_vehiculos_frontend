@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains"
 });
 const metadata = {
-  title: "Sea Automotores - Tu pr\xF3ximo auto te espera",
+  title: "Ortega Automotores - Tu pr\xF3ximo auto te espera",
   description: "Agencia automotriz con los mejores veh\xEDculos nuevos y usados. Financiamiento, garant\xEDa y servicio de primera calidad.",
   generator: "v0.app"
 };

@@ -41,15 +41,28 @@ function aLocal(iso) {
 
 const aTexto = (n) => (n != null ? String(n) : "");
 
+// Cómo identifica el boleto al auto que vende la agencia. Los tres son
+// obligatorios; mismos topes que las columnas de la ficha.
+const IDENTIFICACION = [
+  { campo: "entregadoDominio", label: "Dominio *", falta: "el dominio", max: 15, placeholder: "AB123CD" },
+  { campo: "entregadoMotor", label: "Número de motor *", falta: "el número de motor", max: 40 },
+  { campo: "entregadoChasis", label: "Número de chasis *", falta: "el número de chasis", max: 40 },
+];
+
 // Un boleto nuevo arranca con lo que ya se cargó al crear el trámite: lo que
 // el cliente tiene para entregar y el estado en que se recibió la unidad. Un
 // boleto ya guardado conserva sus propios valores. El valor del usado de la
 // parte de pago no se carga acá: es siempre el valor de toma del trámite. El
 // auto que se vende tampoco: se eligió al crear el trámite; el precio de venta
-// arranca en su precio de lista.
+// arranca en su precio de lista, y dominio, motor y chasis en lo que tenga su
+// ficha, aunque el boleto ya esté guardado: la ficha es la fuente, y lo que se
+// complete o corrija acá se guarda también en ella.
 const aFormulario = (c, ingreso) => ({
   precio: c ? String(c.precio) : "",
   entregadoValor: c?.permuta ? String(c.permuta.valor) : aTexto(ingreso?.autoInteres?.precio),
+  entregadoDominio: ingreso?.autoInteres?.dominio ?? "",
+  entregadoMotor: ingreso?.autoInteres?.motor ?? "",
+  entregadoChasis: ingreso?.autoInteres?.chasis ?? "",
   formaPago: c?.pago.forma ?? "transferencia",
   pagoEnActo: c ? String(c.pago.enActo) : aTexto(ingreso?.parteDePago?.efectivo),
   saldoFecha: c?.pago.saldoFecha ?? "",
@@ -130,6 +143,8 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
     if (precio > TOPE_MONTO) return "El valor del vehículo supera el máximo que admite el sistema.";
     if (esPermuta) {
       if (!auto) return "El trámite no tiene el vehículo que compra el cliente: elegilo en Editar trámite.";
+      const faltan = IDENTIFICACION.filter(({ campo }) => !form[campo].trim()).map(({ falta }) => falta);
+      if (faltan.length) return `Falta ${faltan.join(", ")} del vehículo que vende la agencia.`;
       if (!(valorEntregado > 0)) return "Falta el precio de venta del vehículo de la agencia.";
       if (valorEntregado > TOPE_MONTO) return "El valor del vehículo de la agencia supera el máximo que admite el sistema.";
     }
@@ -151,7 +166,12 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
     try {
       await guardarCompraventaIngreso(ingresoId, {
         precio,
-        ...(esPermuta && { entregadoValor: valorEntregado }),
+        ...(esPermuta && {
+          entregadoValor: valorEntregado,
+          entregadoDominio: form.entregadoDominio,
+          entregadoMotor: form.entregadoMotor,
+          entregadoChasis: form.entregadoChasis,
+        }),
         formaPago: form.formaPago,
         pagoEnActo: enActo,
         saldoFecha: haySaldo ? form.saldoFecha : null,
@@ -193,7 +213,7 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
           <Paso
             n={paso()}
             titulo="Vehículo que vende la agencia"
-            ayuda="Se eligió al crear el trámite (se cambia en Editar trámite). Dominio, motor y chasis se toman de su ficha en Vehículos."
+            ayuda="Se eligió al crear el trámite (se cambia en Editar trámite). Dominio, motor y chasis vienen de su ficha en Vehículos: lo que completes o corrijas acá se guarda también ahí."
             primero
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -210,10 +230,22 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
                 ayuda="Se completa con el precio del auto; se puede ajustar."
               />
             </div>
-            {!auto && <Aviso tono="alerta">El trámite no tiene el vehículo que compra el cliente. Elegilo en Editar trámite.</Aviso>}
-            {auto && !auto.dominio && (
-              <Aviso tono="alerta">Este vehículo no tiene dominio cargado. Completalo en Vehículos → Editar antes de guardar el boleto.</Aviso>
+            {auto && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {IDENTIFICACION.map(({ campo, label, max, placeholder }) => (
+                  <Texto
+                    key={campo}
+                    label={label}
+                    valor={form[campo]}
+                    onCambio={set(campo)}
+                    maxLength={max}
+                    placeholder={placeholder}
+                    autoCapitalize="characters"
+                  />
+                ))}
+              </div>
             )}
+            {!auto && <Aviso tono="alerta">El trámite no tiene el vehículo que compra el cliente. Elegilo en Editar trámite.</Aviso>}
           </Paso>
         )}
 

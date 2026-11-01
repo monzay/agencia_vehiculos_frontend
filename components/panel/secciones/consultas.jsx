@@ -48,7 +48,6 @@ function Pills({ etiqueta, opciones, valor, onCambio }) {
 
 const CANAL_VARIANTE = { whatsapp: "exito", instagram: "peligro", facebook: "info", web: "neutral" };
 const CLASIF_VARIANTE = { CALIENTE: "peligro", TIBIO: "alerta", FRIO: "info" };
-const CLASIF_TEXTO = { EN_CALIFICACION: "En calificación" };
 
 // Aviso del agente con IA para el vendedor: lo derivó o acordó una visita.
 function AvisoVendedor({ aviso }) {
@@ -300,7 +299,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                   </td>
                   <td className={`${CELDA} whitespace-nowrap`}>
                     {c.clasificacion ? (
-                      <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{CLASIF_TEXTO[c.clasificacion] ?? c.clasificacion}</Insignia>
+                      <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{c.clasificacion}</Insignia>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -349,7 +348,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                   <AvisoVendedor aviso={getAtendido(c) ? null : c.requiereVendedor} />
 
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {c.clasificacion && <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{CLASIF_TEXTO[c.clasificacion] ?? c.clasificacion}</Insignia>}
+                    {c.clasificacion && <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{c.clasificacion}</Insignia>}
                     {mostrarAsesor && (c.asesor
                       ? <Insignia variante="info"><UserCheck className="w-3 h-3" /> {c.asesor}</Insignia>
                       : <span className="text-xs text-muted-foreground">Sin asignar</span>)}

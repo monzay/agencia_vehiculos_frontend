@@ -1,5 +1,5 @@
 // Helpers compartidos del dashboard de administracion (leads).
-import { Flame, Thermometer, Snowflake, MessageCircle, Hourglass } from "lucide-react";
+import { Flame, Thermometer, Snowflake, MessageCircle } from "lucide-react";
 
 // Estilos y metadatos por clasificacion de lead.
 export const CLASIFICACIONES = {
@@ -32,19 +32,8 @@ export const CLASIFICACIONES = {
   },
 };
 
-// Respondiendo las preguntas del bot pero sin temperatura todavía: se pone
-// recién cuando dijo cómo paga (y, si financia, si tiene recibo o garante).
-const EN_CALIFICACION = {
-  label: "En calificación",
-  icon: Hourglass,
-  badge: "bg-violet-500/15 text-violet-600 border-violet-500/30",
-  dot: "bg-violet-500",
-  barra: "bg-violet-500",
-  descripcion: "Respondiendo las preguntas",
-};
-
-// Consulta sin clasificar (general: solo saludo/menú, sin especificar nada).
-// No es un lead frío, así que lleva su propio badge neutro.
+// Consulta sin clasificar (venta o consignación: no pasan por la calificación
+// del bot). Lleva su propio badge neutro.
 export const SIN_CLASIFICAR = {
   label: "Consulta general",
   icon: MessageCircle,
@@ -55,7 +44,6 @@ export const SIN_CLASIFICAR = {
 };
 
 export function infoClasificacion(clasif) {
-  if (clasif === "EN_CALIFICACION") return EN_CALIFICACION;
   return CLASIFICACIONES[clasif] ?? SIN_CLASIFICAR;
 }
 

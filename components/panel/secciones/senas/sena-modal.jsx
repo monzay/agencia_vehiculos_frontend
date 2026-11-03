@@ -15,7 +15,6 @@ import { FORMAS_PAGO, tituloAuto, fechaCorta } from "./formato";
 // se guarda como fecha de vencimiento (hoy + plazo).
 
 const TOPE_MONTO = 9999999999.99;
-const CLIENTE_VACIO = { nombre: "", apellido: "", dni: "", telefono: "" };
 const MAX_DIAS = 365;
 const DIA_MS = 86_400_000;
 
@@ -68,12 +67,14 @@ function validar(form, editando) {
   return null;
 }
 
-// `auto`: viene elegido cuando se seña desde Vehículos. `sena`: para editar.
-export function SenaModal({ sena = null, auto = null, onCerrar, onGuardado }) {
+const aCliente = (p) => ({ nombre: p?.nombre ?? "", apellido: p?.apellido ?? "", dni: p?.dni ?? "", telefono: p?.telefono ?? "" });
+
+// `auto`, `clienteInicial` y `sesionId`: vienen cargados si se avanzó desde una consulta. `sena`: para editar.
+export function SenaModal({ sena = null, auto = null, clienteInicial = null, sesionId = null, onCerrar, onGuardado }) {
   const editando = Boolean(sena);
   const [form, setForm] = useState(() => ({
     autoRef: auto?.ref ?? "",
-    cliente: { ...CLIENTE_VACIO },
+    cliente: aCliente(clienteInicial),
     monto: sena ? String(sena.monto) : "",
     formaPago: sena?.formaPago ?? "efectivo",
     plazo: diasRestantes(sena?.vence),
@@ -85,8 +86,7 @@ export function SenaModal({ sena = null, auto = null, onCerrar, onGuardado }) {
 
   const set = (campo) => (valor) => setForm((f) => ({ ...f, [campo]: valor }));
   const setCliente = (campo) => (valor) => setForm((f) => ({ ...f, cliente: { ...f.cliente, [campo]: valor } }));
-  const elegirPersona = (p) =>
-    setForm((f) => ({ ...f, cliente: { nombre: p.nombre ?? "", apellido: p.apellido ?? "", dni: p.dni ?? "", telefono: p.telefono ?? "" } }));
+  const elegirPersona = (p) => setForm((f) => ({ ...f, cliente: aCliente(p) }));
 
   const autoElegido = sena?.auto ?? auto ?? libres.find((a) => a.ref === form.autoRef);
 
@@ -98,7 +98,7 @@ export function SenaModal({ sena = null, auto = null, onCerrar, onGuardado }) {
     try {
       const datos = { monto: Number(form.monto), formaPago: form.formaPago, vence: enDias(Number(form.plazo)), notas: form.notas };
       if (editando) await actualizarSena(sena.id, datos);
-      else await crearSena({ ...datos, autoRef: form.autoRef, cliente: form.cliente });
+      else await crearSena({ ...datos, autoRef: form.autoRef, cliente: form.cliente, sesionId });
       onGuardado();
       onCerrar();
     } catch (e) {

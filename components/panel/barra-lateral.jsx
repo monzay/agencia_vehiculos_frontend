@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   PanelLeft,
   X,
+  Wrench,
 } from "lucide-react";
 
 // `soloAdmin` = el ítem solo se muestra al rol admin.
@@ -30,6 +31,7 @@ const items = [
   { id: "financiacion", label: "Financiación", icon: HandCoins, soloAdmin: true },
   { id: "senas", label: "Señas", icon: BookmarkCheck, soloAdmin: true },
   { id: "documentos", label: "Documentos", icon: FileText, soloAdmin: true },
+  { id: "preparacion", label: "Preparación", icon: Wrench },
   { id: "vehiculos", label: "Vehículos", icon: Car },
   { id: "contabilidad", label: "Contabilidad", icon: Calculator, soloAdmin: true },
   { id: "descuentos", label: "Descuentos/Promos", icon: BadgePercent },

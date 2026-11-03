@@ -21,12 +21,14 @@ import { BarraLateral } from "./barra-lateral";
 import { Encabezado } from "./encabezado";
 import { SeccionResumen } from "./secciones/resumen";
 import { SeccionConsultas } from "./secciones/consultas";
+import { AvanzarConsulta } from "./secciones/avanzar-consulta";
 import { SeccionClientes } from "./secciones/clientes";
 import { SeccionFinanciacion } from "./secciones/financiacion";
 import { SeccionTramites } from "./secciones/tramites";
 import { SeccionConsignaciones } from "./secciones/consignaciones";
 import { SeccionDocumentos } from "./secciones/documentos";
 import { SeccionSenas } from "./secciones/senas";
+import { SeccionPreparacion } from "./secciones/preparacion";
 import { SeccionAsesores } from "./secciones/asesores";
 import { SeccionEntregas } from "./secciones/entregas";
 import { SeccionVehiculos } from "./secciones/vehiculos";
@@ -54,6 +56,10 @@ export function Panel({ consultaId = null }) {
   // Trámite a abrir al entrar a Documentos: { id, modalidad }. Lo piden
   // Trámites al crear uno y Señas al iniciar uno.
   const [tramiteAAbrir, setTramiteAAbrir] = useState(null);
+  // La consulta que está avanzando el admin (botón Avanzar).
+  const [consultaAAvanzar, setConsultaAAvanzar] = useState(null);
+  // La preparación a abrir al entrar a Preparación: la pide el legajo.
+  const [preparacionAAbrir, setPreparacionAAbrir] = useState(null);
 
   const [usuario, setUsuario] = useState(null); // { id, nombre, rol }
   const [verificando, setVerificando] = useState(true);
@@ -79,6 +85,27 @@ export function Panel({ consultaId = null }) {
   const [nuevoDesde, setNuevoDesde] = useState({}); // marca "congelada" al entrar (resalta filas)
 
   const esAdmin = usuario?.rol === "admin";
+
+  // Abre el legajo de una parte de pago: la piden Señas y Financiación.
+  const abrirParteDePago = (id) => {
+    setTramiteAAbrir({ id, modalidad: "permuta" });
+    setSeccion("documentos");
+  };
+
+  const irASenas = () => {
+    setConsultaAAvanzar(null);
+    setSeccion("senas");
+  };
+  const irAlTramite = (tramite) => {
+    setConsultaAAvanzar(null);
+    setTramiteAAbrir(tramite);
+    setSeccion("documentos");
+  };
+  const verPreparacion = (id) => {
+    setPreparacionAAbrir(id);
+    setSeccion("preparacion");
+  };
+  const verAvance = (avance) => (avance.tipo === "tramite" ? irAlTramite({ id: avance.id, modalidad: avance.modalidad }) : irASenas());
 
   // Guard de sesión: sin token o token inválido → /login.
   useEffect(() => {
@@ -179,6 +206,8 @@ export function Panel({ consultaId = null }) {
         onSeccion={(s) => {
           setSeccion(s);
           setTramiteAAbrir(null);
+          setConsultaAAvanzar(null);
+          setPreparacionAAbrir(null);
           setMenuMovil(false);
         }}
         colapsada={colapsada}
@@ -226,20 +255,16 @@ export function Panel({ consultaId = null }) {
                   nuevoDesde={nuevoDesde.consultas}
                   nuevoDesdeVenta={nuevoDesde.ventas}
                   abrirId={consultaId}
+                  onAvanzar={esAdmin ? setConsultaAAvanzar : undefined}
+                  onVerAvance={esAdmin ? verAvance : undefined}
                 />
               )}
               {seccion === "clientes" && <SeccionClientes busqueda={busqueda} refrescar={refrescar} nuevoDesde={nuevoDesde.clientes} />}
               {seccion === "financiacion" && esAdmin && (
-                <SeccionFinanciacion busqueda={busqueda} refrescar={refrescar} />
+                <SeccionFinanciacion busqueda={busqueda} refrescar={refrescar} onAbrirTramite={abrirParteDePago} />
               )}
               {seccion === "tramites" && esAdmin && (
-                <SeccionTramites
-                  onSenaCreada={() => setSeccion("senas")}
-                  onTramiteCreado={(tramite) => {
-                    setTramiteAAbrir(tramite);
-                    setSeccion("documentos");
-                  }}
-                />
+                <SeccionTramites onSenaCreada={irASenas} onTramiteCreado={irAlTramite} />
               )}
               {seccion === "consignaciones" && (
                 <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
@@ -248,10 +273,7 @@ export function Panel({ consultaId = null }) {
                 <SeccionSenas
                   busqueda={busqueda}
                   esAdmin={esAdmin}
-                  onAbrirTramite={(id) => {
-                    setTramiteAAbrir({ id, modalidad: "permuta" });
-                    setSeccion("documentos");
-                  }}
+                  onAbrirTramite={abrirParteDePago}
                 />
               )}
               {seccion === "documentos" && esAdmin && (
@@ -260,7 +282,11 @@ export function Panel({ consultaId = null }) {
                   busqueda={busqueda}
                   esAdmin={esAdmin}
                   abrirTramite={tramiteAAbrir}
+                  onVerPreparacion={verPreparacion}
                 />
+              )}
+              {seccion === "preparacion" && (
+                <SeccionPreparacion busqueda={busqueda} esAdmin={esAdmin} abrirId={preparacionAAbrir} onAbrirTramite={irAlTramite} />
               )}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
               {seccion === "contabilidad" && esAdmin && <SeccionContabilidad />}
@@ -294,6 +320,16 @@ export function Panel({ consultaId = null }) {
           )}
         </main>
       </div>
+
+      {consultaAAvanzar && (
+        <AvanzarConsulta
+          key={consultaAAvanzar}
+          sesionId={consultaAAvanzar}
+          onCerrar={() => setConsultaAAvanzar(null)}
+          onSenaCreada={irASenas}
+          onTramiteCreado={irAlTramite}
+        />
+      )}
     </div>
   );
 }

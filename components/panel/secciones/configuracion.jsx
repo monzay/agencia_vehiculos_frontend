@@ -5,6 +5,7 @@ import { UserCog, Lock, Scale, Users } from "lucide-react";
 import { actualizarMiPerfil, actualizarConfig, actualizarAsesor } from "@/lib/api";
 import { TarjetaUbicacion } from "./configuracion-ubicacion";
 import { TarjetaHorarios } from "./configuracion-horarios";
+import { TarjetaCredito } from "./configuracion-credito";
 import { GrupoConfig, CabeceraTarjeta } from "./configuracion-ui";
 import { Card, CardContent, CardFooter } from "@/components/interfaz/tarjeta";
 import { Boton } from "@/components/interfaz/boton";
@@ -199,6 +200,11 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
             )}
           </CardContent>
         </Card>
+      </GrupoConfig>
+
+      {/* Verificación crediticia */}
+      <GrupoConfig titulo="Verificación crediticia" descripcion="Consulta a la Central de Deudores del BCRA para quien financia, con su permiso.">
+        <TarjetaCredito config={config} onConfig={onConfig} />
       </GrupoConfig>
     </div>
   );

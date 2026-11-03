@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import {
   CalendarClock, CalendarDays,
   Loader2, Pencil, Trash2, ListChecks, CheckCircle2, Circle,
-  ChevronRight, ChevronDown,
+  ChevronRight, ChevronDown, FolderOpen,
 } from "lucide-react";
 import {
   actualizarFinanciacion, eliminarFinanciacion, marcarCuotaPagada,
@@ -71,7 +71,8 @@ function Item({ label, children }) {
 
 // Las financiaciones se crean dentro del legajo de una parte de pago (último
 // paso del trámite). Acá se siguen: cuotas, datos y edición del plan.
-export function SeccionFinanciacion({ busqueda, refrescar }) {
+// `onAbrirTramite(ingresoId)`: abre el legajo de la parte de pago que se financia.
+export function SeccionFinanciacion({ busqueda, refrescar, onAbrirTramite }) {
   const [abierto, setAbierto] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
@@ -184,6 +185,11 @@ export function SeccionFinanciacion({ busqueda, refrescar }) {
   // Botones de acción y panel de datos: compartidos por tabla (desktop) y tarjetas (móvil).
   const accionesFinanciacion = (f) => (
     <div className="flex items-center gap-1.5">
+      {f.ingresoId && onAbrirTramite && (
+        <Boton variante="secundario" tamano="icono" onClick={() => onAbrirTramite(f.ingresoId)} title="Ver trámite">
+          <FolderOpen className="w-3.5 h-3.5" />
+        </Boton>
+      )}
       <Boton variante="secundario" tamano="icono" onClick={() => setDetalle(f)} title="Ver cuotas">
         <ListChecks className="w-3.5 h-3.5" />
       </Boton>

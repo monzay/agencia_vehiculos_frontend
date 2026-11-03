@@ -225,7 +225,7 @@ function ListaIngresos({ modalidad, busqueda, onAbrir }) {
 
 // `abrirTramite`: { id, modalidad } de un trámite a abrir de entrada (recién
 // creado en Trámites, o iniciado desde una seña).
-export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite = null }) {
+export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite = null, onVerPreparacion }) {
   const [modalidad, setModalidad] = useState(abrirTramite?.modalidad ?? MODALIDADES[0].id);
   const [catalogo, setCatalogo] = useState(null);
   const [abierto, setAbierto] = useState(abrirTramite?.id ?? null); // id del ingreso en detalle
@@ -287,6 +287,7 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite
             onVolver={() => setAbierto(null)}
             onEditar={setEditando}
             onCambio={() => setRecarga((n) => n + 1)}
+            onVerPreparacion={onVerPreparacion}
           />
         ) : (
           <ListaIngresos key={`${modalidad}-${recarga}`} modalidad={modalidad} busqueda={busqueda} onAbrir={setAbierto} />

@@ -19,9 +19,12 @@ import {
   Undo2,
   HandCoins,
   BookmarkCheck,
+  XCircle,
+  Wrench,
 } from "lucide-react";
 import {
   obtenerIngreso,
+  eliminarIngreso,
   cambiarEstadoIngreso,
   venderIngreso,
   deshacerVentaIngreso,
@@ -35,10 +38,13 @@ import { Insignia } from "../../ui/insignia";
 import { ConfirmarModal } from "../../ui/confirmar-modal";
 import { Aviso } from "./campos";
 import { Papeles } from "./papeles";
+import { Seguimiento } from "./seguimiento";
 import { Impresos } from "./impresos";
 import { RequisitosContrato, PapelesObligatorios } from "./requisitos-contrato";
 import { PublicarModal } from "./publicar-modal";
-import { FinanciacionModal } from "./financiacion-modal";import { VINCULO } from "./vinculos";
+import { FinanciacionModal } from "./financiacion-modal";
+import { CierreVenta } from "./cierre-venta";
+import { VINCULO } from "./vinculos";
 import { CONTRATOS } from "./contratos";
 import { MODALIDAD, vendeLaAgencia } from "./modalidades";
 import { tituloVehiculo, tieneVehiculo, dni, cuit, fechaDeMomento } from "./formato";
@@ -191,7 +197,7 @@ function PrecioDeVenta({ precio, beneficios }) {
 
 // `version` cambia cuando el ingreso se edita afuera (el modal de Editar
 // ingreso): sin recargar, el detalle y el próximo Editar mostrarían datos viejos.
-export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio }) {
+export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio, onVerPreparacion }) {
   const [ingreso, setIngreso] = useState(null);
   const [error, setError] = useState(null);
   const [pestana, setPestana] = useState("papeles");
@@ -205,6 +211,9 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   // La venta que se confirma: "vender" | "deshacer" | null.
   const [confirmandoAccionVenta, setConfirmandoAccionVenta] = useState(null);
+  const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [hitoAMarcar, setHitoAMarcar] = useState(null);
   const [avisos, setAvisos] = useState([]);
 
   const cargar = useCallback(() => {
@@ -257,6 +266,38 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
     } finally {
       setCambiandoEstado(false);
       setConfirmandoAccionVenta(null);
+    }
+  }
+
+  // Lo que abre cada paso de la tira de Seguimiento: siempre lo que ya existe en el legajo.
+  const ACCIONES_DE_PASO = {
+    papeles: () => setPestana("papeles"),
+    ver_contrato: () => setPestana("contrato"),
+    cargar_contrato: () => setEditandoContrato(true),
+    firmar: () => setPestana("contrato"),
+    financiar: () => setFinanciando(true),
+    vender: () => setConfirmandoAccionVenta("vender"),
+    publicar: () => setPublicando(true),
+    vender_consignacion: () => setVendiendo(true),
+    cobrado: () => setHitoAMarcar("cobrado"),
+    entregado: () => setHitoAMarcar("entregado"),
+    transferido: () => setHitoAMarcar("transferido"),
+    preparacion: () => onVerPreparacion?.(ingreso.preparacion.id),
+  };
+
+  // El backend dice si se puede: si no, muestra qué hacer primero.
+  async function cancelarTramite() {
+    setCancelando(true);
+    setError(null);
+    try {
+      await eliminarIngreso(ingreso.id);
+      onCambio?.();
+      onVolver();
+    } catch (e) {
+      setError(e.message);
+      setConfirmandoCancelar(false);
+    } finally {
+      setCancelando(false);
     }
   }
 
@@ -327,6 +368,31 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
             <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => setFinanciando(true)}>
               <HandCoins className="w-3.5 h-3.5" /> Financiación
               {ingreso.financiacion && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+            </Boton>
+          )}
+          {ingreso.preparacion && onVerPreparacion && (
+            <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => onVerPreparacion(ingreso.preparacion.id)}>
+              <Wrench className="w-3.5 h-3.5" /> Preparación del usado
+            </Boton>
+          )}
+          {ingreso.sesionId && (
+            <a
+              href={`/admin/${ingreso.sesionId}`}
+              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
+            >
+              Ver consulta
+            </a>
+          )}
+          {/* Lo que ya tuvo ficha en la web se cierra con Marcar retirado. */}
+          {esAdmin && ingreso.estado !== "vendido" && !ingreso.consignacionId && (
+            <Boton
+              variante="peligro"
+              tamano="sm"
+              className="gap-1.5"
+              onClick={() => setConfirmandoCancelar(true)}
+              title="Se deja de ver y el auto queda libre"
+            >
+              <XCircle className="w-3.5 h-3.5" /> Cancelar trámite
             </Boton>
           )}
         </div>
@@ -412,8 +478,15 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
                 tamano="sm"
                 className="gap-1.5"
                 cargando={cambiandoEstado}
+                disabled={!contrato.permuta.vendido && !firmado}
                 onClick={() => setConfirmandoAccionVenta(contrato.permuta.vendido ? "deshacer" : "vender")}
-                title={contrato.permuta.vendido ? "Se marcó por error: el auto vuelve a estar a la venta" : "Marca vendido el auto del boleto, a su precio"}
+                title={
+                  contrato.permuta.vendido
+                    ? "Se marcó por error: el auto vuelve a estar a la venta"
+                    : firmado
+                      ? "Marca vendido el auto del boleto, a su precio"
+                      : "Primero hay que firmar el boleto"
+                }
               >
                 {contrato.permuta.vendido ? <Undo2 className="w-3.5 h-3.5" /> : <CircleDollarSign className="w-3.5 h-3.5" />}
                 {contrato.permuta.vendido ? "Deshacer venta" : "Vendido"}
@@ -485,6 +558,9 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
           </div>
         </div>
       </div>
+
+      <Seguimiento seguimiento={ingreso.seguimiento} onAccion={esAdmin ? (accion) => ACCIONES_DE_PASO[accion]?.() : undefined} />
+      {esAdmin && <CierreVenta ingreso={ingreso} hitoAMarcar={hitoAMarcar} onElegirHito={setHitoAMarcar} onCambio={refrescar} />}
 
       {/* Papeles / Contrato */}
       <div className="flex items-center gap-2">
@@ -585,6 +661,17 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
         cargando={cambiandoEstado}
         onConfirmar={accionVenta}
         onCancelar={() => setConfirmandoAccionVenta(null)}
+      />
+
+      <ConfirmarModal
+        abierto={confirmandoCancelar}
+        titulo="¿Cancelar este trámite?"
+        mensaje="Deja de verse y el vehículo queda libre. Si nació de una seña, la seña vuelve a estar vigente."
+        textoConfirmar="Cancelar trámite"
+        textoCancelar="Volver"
+        cargando={cancelando}
+        onConfirmar={cancelarTramite}
+        onCancelar={() => setConfirmandoCancelar(false)}
       />
 
       {financiando && <FinanciacionModal ingreso={ingreso} onCerrar={() => setFinanciando(false)} onGuardado={refrescar} />}

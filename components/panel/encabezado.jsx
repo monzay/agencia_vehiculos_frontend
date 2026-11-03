@@ -14,6 +14,7 @@ const titulos = {
   consignaciones: { titulo: "Consignaciones", sub: "Vehículos que la agencia vende por cuenta del dueño" },
   senas: { titulo: "Señas", sub: "Vehículos reservados antes del trámite" },
   documentos: { titulo: "Documentos", sub: "Consignaciones, partes de pago y compras: papeles, contratos y recibos" },
+  preparacion: { titulo: "Preparación", sub: "Usados recibidos, hasta que salen a la web" },
   vehiculos: { titulo: "Vehículos", sub: "Catálogo y stock de la agencia" },
   descuentos: { titulo: "Descuentos / Promos", sub: "Rebajas y promociones aplicadas" },
   asesores: { titulo: "Asesores", sub: "Equipo de ventas" },

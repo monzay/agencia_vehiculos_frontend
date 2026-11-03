@@ -11,6 +11,7 @@ export function ConfirmarModal({
   titulo = "¿Seguro querés eliminar este dato?",
   mensaje = "Esta acción no se puede deshacer.",
   textoConfirmar = "Eliminar",
+  textoCancelar = "Cancelar",
   cargando = false,
   onConfirmar,
   onCancelar,
@@ -23,7 +24,7 @@ export function ConfirmarModal({
       </div>
       <ModalPie>
         <Boton variante="fantasma" onClick={onCancelar}>
-          Cancelar
+          {textoCancelar}
         </Boton>
         <Boton
           variante="peligro"

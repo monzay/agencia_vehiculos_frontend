@@ -9,6 +9,7 @@ import { Texto, Numero, Area, Alternador, Paso, Aviso } from "./campos";
 import { PersonaFormulario, aPersona } from "./persona-formulario";
 import { MODALIDAD } from "./modalidades";
 import { VehiculoQueCompra } from "./vehiculo-que-compra";
+import { LoQueDijo } from "./lo-que-dijo";
 
 // Alta del trámite: quién es el cliente y, si entrega un auto, cómo se recibió.
 //
@@ -39,15 +40,25 @@ const SI_NO = [
 const aTexto = (n) => (n != null ? String(n) : "");
 const aMonto = (v) => (v === "" ? null : Number(v));
 
-const aRecepcion = (i) =>
-  i
+const aRecepcion = (i) => ({
+  kmRecepcion: aTexto(i.vehiculo.kmRecepcion),
+  notas: i.notas ?? "",
+  entregaUsado: i.conUsado !== false,
+  parteDePagoVehiculo: i.parteDePago?.vehiculo ?? "",
+  parteDePagoValor: aTexto(i.parteDePago?.valor),
+  parteDePagoEfectivo: aTexto(i.parteDePago?.efectivo),
+});
+
+// Lo que dijo el cliente sobre su usado, si avanzó desde una consulta. El valor de
+// toma no viene: lo decide la agencia.
+const recepcionDeConsulta = (usado) =>
+  usado
     ? {
-        kmRecepcion: aTexto(i.vehiculo.kmRecepcion),
-        notas: i.notas ?? "",
-        entregaUsado: i.conUsado !== false,
-        parteDePagoVehiculo: i.parteDePago?.vehiculo ?? "",
-        parteDePagoValor: aTexto(i.parteDePago?.valor),
-        parteDePagoEfectivo: aTexto(i.parteDePago?.efectivo),
+        ...RECEPCION_VACIA,
+        entregaUsado: usado.entregaUsado,
+        parteDePagoVehiculo: usado.vehiculo,
+        kmRecepcion: aTexto(usado.km),
+        notas: usado.notas,
       }
     : { ...RECEPCION_VACIA };
 
@@ -86,16 +97,20 @@ const sinVacios = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v])
 // `modalidad` solo se usa al crear: un ingreso existente ya trae la suya y no
 // se cambia.
 // `onGuardado` recibe el ingreso guardado (al crear, para abrir su legajo).
-export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) {
+// `precarga`: los datos de la consulta, si se avanzó desde una. Se pueden editar.
+export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerrar, onGuardado }) {
   const editando = Boolean(ingreso);
   const tipo = ingreso?.modalidad ?? modalidad;
   const esParteDePago = tipo === "permuta";
   const esContado = tipo === "contado";
   const esVenta = esParteDePago || esContado;
+  const autoDeConsulta = precarga?.auto?.puedeVender ? precarga.auto : null;
 
-  const [recepcion, setRecepcion] = useState(() => aRecepcion(ingreso));
-  const [titular, setTitular] = useState(() => aPersona(ingreso?.titular));
-  const [autoRef, setAutoRef] = useState(ingreso?.autoInteres?.ref ?? "");
+  const [recepcion, setRecepcion] = useState(() =>
+    editando ? aRecepcion(ingreso) : recepcionDeConsulta(esParteDePago ? precarga?.parteDePago : null)
+  );
+  const [titular, setTitular] = useState(() => aPersona(ingreso?.titular ?? precarga?.cliente));
+  const [autoRef, setAutoRef] = useState(ingreso?.autoInteres?.ref ?? autoDeConsulta?.ref ?? "");
   // Firmado el boleto, o si el trámite nació de una seña, el auto ya no cambia.
   const autoBloqueado = Boolean(ingreso?.contrato?.firmado || ingreso?.sena);
   const [error, setError] = useState(null);
@@ -127,7 +142,9 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
         ...(esVenta && !autoBloqueado && { autoInteresRef: autoRef }),
       };
 
-      const guardado = editando ? await actualizarIngreso(ingreso.id, cuerpo) : await crearIngreso({ ...cuerpo, modalidad });
+      const guardado = editando
+        ? await actualizarIngreso(ingreso.id, cuerpo)
+        : await crearIngreso({ ...cuerpo, modalidad, sesionId: precarga?.sesionId });
       onGuardado(guardado);
       onCerrar();
     } catch (e) {
@@ -149,6 +166,7 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
     >
       <div className="px-6 py-5 space-y-5 overflow-y-auto">
         {error && <Aviso>{error}</Aviso>}
+        <LoQueDijo respuestas={precarga?.respuestas} />
 
         {esVenta && (
           <Paso
@@ -161,7 +179,7 @@ export function IngresoFormulario({ ingreso, modalidad, onCerrar, onGuardado }) 
               valor={autoRef}
               onCambio={setAutoRef}
               ingresoId={ingreso?.id ?? null}
-              actual={ingreso?.autoInteres ?? null}
+              actual={ingreso?.autoInteres ?? autoDeConsulta}
               bloqueado={autoBloqueado}
             />
           </Paso>

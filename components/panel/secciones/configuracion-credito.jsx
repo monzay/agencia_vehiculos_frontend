@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Landmark, ExternalLink, TriangleAlert } from "lucide-react";
-import { actualizarConfig, obtenerPrivacidad, publicarPrivacidad } from "@/lib/api";
+import { obtenerPrivacidad, publicarPrivacidad } from "@/lib/api";
 import { CabeceraTarjeta } from "./configuracion-ui";
 import { Card, CardContent, CardFooter } from "@/components/interfaz/tarjeta";
 import { Boton } from "@/components/interfaz/boton";
 import { Label } from "@/components/interfaz/etiqueta";
-import { Switch } from "@/components/interfaz/interruptor";
 import { Separator } from "@/components/interfaz/separador";
 import { Badge } from "@/components/interfaz/insignia";
 import { Alert, AlertDescription } from "@/components/interfaz/alerta";
@@ -30,16 +29,14 @@ const MARCADOR_SIN_COMPLETAR = /\[[A-ZÁÉÍÓÚÑ ]+\]/;
 
 const fechaCorta = (iso) => new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
 
-export function TarjetaCredito({ config, onConfig }) {
+export function TarjetaCredito() {
   const [vigente, setVigente] = useState(null);
   const [texto, setTexto] = useState("");
   const [cargando, setCargando] = useState(true);
   const [publicando, setPublicando] = useState(false);
-  const [guardandoSwitch, setGuardandoSwitch] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(false);
 
-  const activa = config?.verificacion_crediticia === true;
   const sinCambios = vigente ? texto.trim() === vigente.texto : !texto.trim();
 
   useEffect(() => {
@@ -75,24 +72,6 @@ export function TarjetaCredito({ config, onConfig }) {
     }
   }
 
-  async function alternar() {
-    setError(null);
-    setGuardandoSwitch(true);
-    try {
-      onConfig?.(await actualizarConfig({ verificacion_crediticia: !activa }));
-    } catch (err) {
-      setError(err.message || "No se pudo cambiar la verificación.");
-    } finally {
-      setGuardandoSwitch(false);
-    }
-  }
-
-  const estadoSwitch = activa
-    ? "Activada: el bot pide permiso y el CUIL a quien financia. El asesor ve el semáforo en Consultas."
-    : vigente
-      ? "Desactivada: el bot no consulta al BCRA."
-      : "Publicá la política de privacidad para poder activarla.";
-
   return (
     <Card>
       <CabeceraTarjeta
@@ -105,17 +84,11 @@ export function TarjetaCredito({ config, onConfig }) {
         <Alert>
           <TriangleAlert className="w-4 h-4" />
           <AlertDescription>
-            Antes de activarla: autorización del BCRA para uso comercial, base inscripta en la AAIP y la política revisada por un abogado.
+            {vigente
+              ? "Activa: el bot pide permiso y el CUIL a quien financia. El asesor ve el semáforo en Consultas."
+              : "Al publicar la política, el bot empieza a pedir permiso y el CUIL a quien financia, y a consultar al BCRA. Antes hacen falta la autorización del BCRA para uso comercial, la base inscripta en la AAIP y la política revisada por un abogado."}
           </AlertDescription>
         </Alert>
-
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-secondary/40 p-4">
-          <div className="space-y-1 min-w-0">
-            <Label htmlFor="cfg-credito">Consultar al BCRA desde el bot</Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">{estadoSwitch}</p>
-          </div>
-          <Switch id="cfg-credito" checked={activa} onCheckedChange={alternar} disabled={guardandoSwitch || (!activa && !vigente)} />
-        </div>
 
         <Separator />
 

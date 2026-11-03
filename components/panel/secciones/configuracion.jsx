@@ -204,7 +204,7 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
 
       {/* Verificación crediticia */}
       <GrupoConfig titulo="Verificación crediticia" descripcion="Consulta a la Central de Deudores del BCRA para quien financia, con su permiso.">
-        <TarjetaCredito config={config} onConfig={onConfig} />
+        <TarjetaCredito />
       </GrupoConfig>
     </div>
   );

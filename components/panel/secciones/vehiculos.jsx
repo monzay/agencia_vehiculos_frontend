@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Car, Plus, Pencil, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw, Handshake, BookmarkCheck } from "lucide-react";
+import { Car, Plus, Pencil, X, Loader2, BadgePercent, Gift, Upload, Image as ImageIcon, RotateCcw, Handshake, BookmarkCheck, ListPlus } from "lucide-react";
 import {
   crearVehiculo,
   actualizarVehiculo,
@@ -10,8 +10,10 @@ import {
 } from "@/lib/api";
 import { Overlay } from "../ui/overlay";
 import { fechaCorta } from "./senas/formato";
-import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
+import { Campo, CampoNumero } from "../ui/campo";
+import { ImportarLista } from "./vehiculos/importar-lista";
 import { TIPOS_VEHICULO, tipoVehiculo } from "@/lib/tipos-vehiculo";
+import { COMBUSTIBLES, etiquetaCombustible } from "@/lib/combustibles";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -25,13 +27,13 @@ const FILTROS_VACIOS = {
 const FORM_VACIO = {
   marca: "",
   modelo: "",
+  version: "",
+  disponible: true, // publicado en la web
   anio: "",
   precio: "",
-  costo: "",
+  precioContado: "",
+  anticipo: "",
   kms: "",
-  dominio: "",
-  motor: "",
-  chasis: "",
   stock: "1",
   condicion: "usado",
   tipoVehiculo: "auto",
@@ -71,6 +73,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   const [detalle, setDetalle] = useState(null); // vehículo abierto en el modal de detalle
   const [subiendoPrincipal, setSubiendoPrincipal] = useState(false);
   const [subiendoGaleria, setSubiendoGaleria] = useState(false);
+  const [importando, setImportando] = useState(false); // modal "Importar lista"
 
   // Solo el stock que sigue a la venta. Vender (y deshacer una venta) se hace
   // en el legajo del trámite, en Documentos: acá no hay vendidos.
@@ -97,7 +100,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     const q = (busqueda || "").trim().toLowerCase();
     const precioDe = (v) => v.precio_final ?? v.precio ?? 0;
     const arr = origen.filter((v) => {
-      if (q && !`${v.brand} ${v.model} ${v.year}`.toLowerCase().includes(q)) return false;
+      if (q && !`${v.brand} ${v.model} ${v.version ?? ""} ${v.year}`.toLowerCase().includes(q)) return false;
       if (filtros.marca && v.brand !== filtros.marca) return false;
       if (filtros.condicion && v.condicion !== filtros.condicion) return false;
       if (filtros.beneficio === "descuento" && !v.descuento) return false;
@@ -131,13 +134,13 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     setForm({
       marca: v.brand || "",
       modelo: v.model || "",
+      version: v.version || "",
+      disponible: Boolean(v.disponible),
       anio: String(v.year || ""),
       precio: String(v.precio || ""),
-      costo: v.costo != null ? String(v.costo) : "",
+      precioContado: String(v.precio_contado || ""),
+      anticipo: String(v.anticipo || ""),
       kms: String(v.kms || ""),
-      dominio: v.dominio || "",
-      motor: v.motor || "",
-      chasis: v.chasis || "",
       stock: String(v.stock ?? 1),
       condicion: v.condicion || "usado",
       tipoVehiculo: v.tipo || "auto",
@@ -232,13 +235,13 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
     const payload = {
       marca: form.marca,
       modelo: form.modelo,
+      version: form.version,
+      disponible: form.disponible,
       anio: Number(form.anio),
       precio: Number(form.precio),
-      costo: form.costo === "" ? null : Number(form.costo),
+      precio_contado: form.precioContado,
+      anticipo: form.anticipo,
       kms: Number(form.kms) || 0,
-      dominio: form.dominio,
-      motor: form.motor,
-      chasis: form.chasis,
       stock: Number(form.stock),
       condicion: form.condicion,
       tipoVehiculo: form.tipoVehiculo,
@@ -362,12 +365,20 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <p className="text-sm text-muted-foreground">{`${origen.length} en el catálogo`}</p>
         {esAdmin && (
-          <button
-            onClick={abrirAlta}
-            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" /> Nuevo vehículo
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setImportando(true)}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-border text-sm font-medium text-foreground hover:border-accent/50 transition-colors"
+            >
+              <ListPlus className="w-4 h-4" /> Importar lista
+            </button>
+            <button
+              onClick={abrirAlta}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" /> Nuevo vehículo
+            </button>
+          </div>
         )}
       </div>
 
@@ -444,8 +455,8 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-foreground group-hover:text-accent transition-colors">{v.brand} {v.model}</p>
-                        <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · no disponible"}</p>
+                        <p className="font-medium text-foreground group-hover:text-accent transition-colors">{v.brand} {v.model}{v.version ? ` ${v.version}` : ""}</p>
+                        <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · sin publicar"}</p>
                       </div>
                     </button>
                   </td>
@@ -503,8 +514,8 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-foreground truncate">{v.brand} {v.model}</p>
-                  <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · no disponible"}</p>
+                  <p className="font-medium text-foreground truncate">{v.brand} {v.model}{v.version ? ` ${v.version}` : ""}</p>
+                  <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · sin publicar"}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
                     <span>{v.year}</span>
                     <span>·</span>
@@ -550,9 +561,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
             </div>
 
             <form onSubmit={enviar} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Campo label="Marca / Nombre *" valor={form.marca} onCambio={(v) => cambiar("marca", v)} placeholder="Volkswagen" autoFocus />
                 <Campo label="Modelo *" valor={form.modelo} onCambio={(v) => cambiar("modelo", v)} placeholder="Gol Trend" />
+                <Campo label="Versión" valor={form.version} onCambio={(v) => cambiar("version", v)} placeholder="1.6 Pack I" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <Campo label="Año *" tipo="number" valor={form.anio} onCambio={(v) => cambiar("anio", v)} placeholder="2020" />
@@ -568,12 +580,6 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     <option value="0km">0 km</option>
                   </select>
                 </label>
-              </div>
-              {/* Identificación de la unidad: el boleto la usa cuando se vende con parte de pago. */}
-              <div className="grid grid-cols-3 gap-3">
-                <Campo label="Dominio" valor={form.dominio} onCambio={(v) => cambiar("dominio", v)} placeholder="AB123CD" />
-                <Campo label="Número de motor" valor={form.motor} onCambio={(v) => cambiar("motor", v)} />
-                <Campo label="Número de chasis" valor={form.chasis} onCambio={(v) => cambiar("chasis", v)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
@@ -598,9 +604,11 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     className="w-full h-9 px-2 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-accent"
                   >
                     <option value="">Sin especificar</option>
-                    <option value="nafta">Nafta</option>
-                    <option value="gnc">GNC</option>
-                    <option value="diesel">Diésel</option>
+                    {COMBUSTIBLES.map((c) => (
+                      <option key={c.valor} value={c.valor}>
+                        {c.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>
@@ -608,15 +616,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 <CampoNumero label="Precio (ARS) *" valor={form.precio} onCambio={(v) => cambiar("precio", v)} placeholder="12.500.000" />
                 <Campo label="Stock (unidades)" tipo="number" valor={form.stock} onCambio={(v) => cambiar("stock", v)} placeholder="1" />
               </div>
-              {/* Lo que PAGÓ la agencia. Es lo único que permite calcular la
-                  ganancia neta; sin esto la venta suma facturación pero 0 de
-                  ganancia. No se muestra en el sitio público. */}
-              <CampoNumero
-                label="Costo de compra (ARS)"
-                valor={form.costo}
-                onCambio={(v) => cambiar("costo", v)}
-                placeholder="Lo que pagaste por el vehículo"
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <CampoNumero label="Precio al contado (ARS)" valor={form.precioContado} onCambio={(v) => cambiar("precioContado", v)} placeholder="10.500.000" />
+                <CampoNumero label="Anticipo (ARS)" valor={form.anticipo} onCambio={(v) => cambiar("anticipo", v)} placeholder="3.000.000" />
+              </div>
               <label className="block">
                 <span className="block text-xs font-medium text-muted-foreground mb-1.5">Descripción</span>
                 <textarea
@@ -680,6 +683,12 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 </label>
               </div>
 
+              {/* Sin marcar no sale en la web ni lo ofrece el bot. Los importados de una lista entran así. */}
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" checked={form.disponible} onChange={(e) => cambiar("disponible", e.target.checked)} className="h-4 w-4 accent-accent" />
+                Publicado en la web
+              </label>
+
               {error && <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5 text-sm text-destructive">{error}</div>}
 
               <div className="flex items-center justify-end gap-2 pt-1">
@@ -726,7 +735,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 <Dato label="Stock">{detalle.stock ?? 0} {detalle.stock === 1 ? "unidad" : "unidades"}</Dato>
                 <Dato label="Condición">{detalle.condicion === "0km" ? "0 km" : "Usado"}</Dato>
                 <Dato label="Tipo">{tipoVehiculo(detalle.tipo).label}</Dato>
-                {detalle.combustible && <Dato label="Combustible">{detalle.combustible}</Dato>}
+                {detalle.combustible && <Dato label="Combustible">{etiquetaCombustible(detalle.combustible)}</Dato>}
                 <Dato label="Disponible">{detalle.disponible ? "Sí" : "No"}</Dato>
                 <Dato label="Precio">
                   {detalle.descuento ? (
@@ -772,7 +781,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
         </Overlay>
       )}
 
-
+      {importando && <ImportarLista onCerrar={() => setImportando(false)} onImportado={onRecargar} />}
     </div>
   );
 }
@@ -786,23 +795,3 @@ function Dato({ label, children }) {
   );
 }
 
-// Precio o kilómetros: con puntos de miles al tipear; el formulario guarda los dígitos.
-function CampoNumero({ valor, onCambio, ...props }) {
-  return <Campo {...props} valor={conPuntosDeMiles(aDigitos(valor))} onCambio={(v) => onCambio(soloDigitos(v))} />;
-}
-
-function Campo({ label, valor, onCambio, placeholder, tipo = "text", autoFocus }) {
-  return (
-    <label className="block">
-      <span className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</span>
-      <input
-        type={tipo}
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        className="w-full h-9 px-3 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-accent"
-      />
-    </label>
-  );
-}

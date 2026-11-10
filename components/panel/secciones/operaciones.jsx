@@ -20,8 +20,8 @@ export const OPERACIONES = [
   },
   {
     id: "permuta",
-    titulo: "Venta con parte de pago",
-    detalle: "La agencia le vende un vehículo; el cliente entrega un usado y lo que falta lo paga con plata o cuotas.",
+    titulo: "Venta financiada o con parte de pago",
+    detalle: "La agencia le vende un vehículo; el cliente deja un anticipo o entrega un usado, y lo que falta lo paga con plata o cuotas.",
     icono: Repeat,
   },
 ];

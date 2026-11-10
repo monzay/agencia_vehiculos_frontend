@@ -5,8 +5,8 @@ import { NextResponse } from "next/server";
 // El asesor lo publica en sus redes. Acá NO se manda a WhatsApp: se deja una
 // marca en el navegador y se lo lleva directo al catálogo (pedido del 13/10/2026),
 // para que vea los autos de entrada. Cuando toque "Consultar", el mensaje sale
-// con el código del asesor adentro (ver lib/constantes.js) y el bot le atribuye
-// la consulta en vez de repartirla por carga.
+// con el código del asesor adentro (ver lib/constantes.js) y el agente se la asigna:
+// la consulta es de ese asesor aunque el cliente ya hubiera hablado con otro.
 //
 // Si el slug no existe o el asesor está inactivo, igual se lo manda al
 // catálogo, sin marca: un cliente que llega por un link viejo tiene que ver el
@@ -17,7 +17,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Ventana de atribución: cuánto vale el link después de que el cliente entra.
 // 30 minutos cubre de sobra mirar el catálogo y escribir; pasado ese rato la
-// consulta se considera espontánea y cae al reparto equitativo.
+// consulta se considera espontánea y se reparte por turnos entre los asesores.
 const MINUTOS = 30;
 
 export async function GET(request, { params }) {
@@ -36,7 +36,7 @@ export async function GET(request, { params }) {
 
     // La marca CADUCA sola: la atribución vale para la visita que entró por el
     // link, no para las siguientes. Si el cliente vuelve más tarde escribiendo
-    // la dirección a mano, esa consulta va al reparto equitativo.
+    // la dirección a mano, esa consulta se reparte por turnos.
     //
     // Un plazo fijo y no una cookie de sesión porque el navegador del celular
     // casi nunca se cierra del todo: "hasta que cierre el navegador" puede ser

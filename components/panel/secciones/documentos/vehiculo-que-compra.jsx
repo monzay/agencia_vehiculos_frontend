@@ -1,6 +1,6 @@
 "use client";
 
-import { Selector, Aviso } from "./campos";
+import { Selector } from "./campos";
 import { pesos } from "./impresos/etiquetas";
 import { usarStockPropio } from "./usar-stock-propio";
 
@@ -8,6 +8,7 @@ import { usarStockPropio } from "./usar-stock-propio";
 // la venta al contado. El boleto lo toma de acá. Muestra el precio y lo que la
 // agencia publicó para ese auto (descuento, promociones), como lo vio el cliente.
 //
+// `onCambio(ref, auto)`: el auto elegido con sus datos, null si se vació.
 // `actual`: el auto ya elegido (al editar). `bloqueado`: no se puede cambiar
 // (boleto firmado o trámite que nació de una seña).
 
@@ -47,12 +48,9 @@ export function VehiculoQueCompra({ valor, onCambio, ingresoId = null, actual = 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Selector label="Vehículo *" valor={valor} onCambio={onCambio} opciones={opciones} vacio="Elegí un vehículo…" />
+        <Selector label="Vehículo *" valor={valor} onCambio={(ref) => onCambio(ref, stock.find((a) => a.ref === ref) ?? null)} opciones={opciones} vacio="Elegí un vehículo…" />
       </div>
       {elegido && <Detalle auto={elegido} />}
-      {elegido && !elegido.dominio && (
-        <Aviso tono="alerta">Este vehículo no tiene dominio cargado: se puede crear el trámite, y el dominio, el motor y el chasis se completan al armar el boleto.</Aviso>
-      )}
     </div>
   );
 }

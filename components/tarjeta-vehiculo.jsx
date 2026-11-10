@@ -6,6 +6,7 @@ import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos"
 import { usarEnVista } from "@/hooks/usar-en-vista";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
+import { etiquetaCombustible } from "@/lib/combustibles";
 
 // Dato de ficha técnica: rótulo mono espaciado + valor en mono tabular. Las
 // cifras tabulares hacen que año, kms y precio alineen entre tarjetas, así la
@@ -18,8 +19,6 @@ function Dato({ rotulo, children }) {
     </div>
   );
 }
-
-const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
 // "DD/MM" para la vigencia del beneficio (fechas vienen etiquetadas UTC).
 function fechaCorta(iso) {
@@ -96,7 +95,7 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
           <div className="mt-5 grid grid-cols-3 gap-3">
             <Dato rotulo="Año">{vehicle.year}</Dato>
             <Dato rotulo="Kms">{sinKm ? "—" : vehicle.kms.toLocaleString("es-AR")}</Dato>
-            <Dato rotulo="Motor">{COMBUSTIBLE[vehicle.combustible] ?? "—"}</Dato>
+            <Dato rotulo="Motor">{etiquetaCombustible(vehicle.combustible) ?? "—"}</Dato>
           </div>
 
           {/* Beneficios vigentes: descuento del vehículo y/o promociones */}

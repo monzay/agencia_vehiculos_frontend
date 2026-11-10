@@ -6,7 +6,7 @@ import { crearSena, actualizarSena, obtenerVehiculosAdmin } from "@/lib/api";
 import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
 import { Texto, Numero, Selector, Area, Paso, Aviso } from "../documentos/campos";
-import { BuscadorPersona } from "../documentos/buscador-persona";
+import { BuscadorPersona, ayudaDeCarga } from "../documentos/buscador-persona";
 import { pesos } from "../documentos/impresos/etiquetas";
 import { FORMAS_PAGO, tituloAuto, fechaCorta } from "./formato";
 
@@ -72,6 +72,7 @@ const aCliente = (p) => ({ nombre: p?.nombre ?? "", apellido: p?.apellido ?? "",
 // `auto`, `clienteInicial` y `sesionId`: vienen cargados si se avanzó desde una consulta. `sena`: para editar.
 export function SenaModal({ sena = null, auto = null, clienteInicial = null, sesionId = null, onCerrar, onGuardado }) {
   const editando = Boolean(sena);
+  const desdeConsulta = Boolean(sesionId);
   const [form, setForm] = useState(() => ({
     autoRef: auto?.ref ?? "",
     cliente: aCliente(clienteInicial),
@@ -131,7 +132,7 @@ export function SenaModal({ sena = null, auto = null, clienteInicial = null, ses
           )}
         </Paso>
 
-        <Paso n={2} titulo="Cliente" ayuda={editando ? undefined : "Quien deja la seña. Buscalo primero: puede que ya esté cargado."}>
+        <Paso n={2} titulo="Cliente" ayuda={editando ? undefined : `Quien deja la seña. ${ayudaDeCarga(desdeConsulta)}`}>
           {editando ? (
             <p className="text-sm text-foreground">
               {[sena.cliente?.nombre, sena.cliente?.apellido].filter(Boolean).join(" ") || "Sin nombre"}
@@ -139,7 +140,7 @@ export function SenaModal({ sena = null, auto = null, clienteInicial = null, ses
             </p>
           ) : (
             <>
-              <BuscadorPersona onElegir={elegirPersona} />
+              {!desdeConsulta && <BuscadorPersona onElegir={elegirPersona} />}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Texto label="Nombre *" valor={form.cliente.nombre} onCambio={setCliente("nombre")} placeholder="Juan" />
                 <Texto label="Apellido" valor={form.cliente.apellido} onCambio={setCliente("apellido")} placeholder="Pérez" />

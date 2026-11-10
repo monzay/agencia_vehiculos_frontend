@@ -7,7 +7,7 @@ import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
 import { Texto, Numero, Selector, Area, Alternador, Paso, Aviso } from "./campos";
 import { pesos } from "./impresos/etiquetas";
-import { vendeLaAgencia } from "./modalidades";
+import { precioInicialDelBoleto, vendeLaAgencia } from "./modalidades";
 
 // Las condiciones del boleto de compraventa o del contrato de permuta.
 //
@@ -54,12 +54,12 @@ const IDENTIFICACION = [
 // boleto ya guardado conserva sus propios valores. El valor del usado de la
 // parte de pago no se carga acá: es siempre el valor de toma del trámite. El
 // auto que se vende tampoco: se eligió al crear el trámite; el precio de venta
-// arranca en su precio de lista, y dominio, motor y chasis en lo que tenga su
+// arranca en `precioInicialDelBoleto`, y dominio, motor y chasis en lo que tenga su
 // ficha, aunque el boleto ya esté guardado: la ficha es la fuente, y lo que se
 // complete o corrija acá se guarda también en ella.
-const aFormulario = (c, ingreso) => ({
+const aFormulario = (c, ingreso, modalidad) => ({
   precio: c ? String(c.precio) : "",
-  entregadoValor: c?.permuta ? String(c.permuta.valor) : aTexto(ingreso?.autoInteres?.precio),
+  entregadoValor: c?.permuta ? String(c.permuta.valor) : aTexto(precioInicialDelBoleto(modalidad, ingreso?.autoInteres)),
   entregadoDominio: ingreso?.autoInteres?.dominio ?? "",
   entregadoMotor: ingreso?.autoInteres?.motor ?? "",
   entregadoChasis: ingreso?.autoInteres?.chasis ?? "",
@@ -120,7 +120,9 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
   // La agencia vende un auto propio: parte de pago o venta al contado.
   const esPermuta = vendeLaAgencia(modalidad);
   const esParteDePago = modalidad === "permuta";
-  const [form, setForm] = useState(() => aFormulario(contrato, ingreso));
+  // Si la agencia no recibe un vehículo, no hay unidad cuyo estado anotar.
+  const recibeVehiculo = ingreso?.conUsado !== false;
+  const [form, setForm] = useState(() => aFormulario(contrato, ingreso, modalidad));
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const sena = esPermuta ? ingreso?.sena ?? null : null;
@@ -178,7 +180,7 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
         entrega: new Date(form.entrega).toISOString(),
         transferenciaDias: Number(form.transferenciaDias),
         gastosTransferencia: form.gastosTransferencia,
-        estadoUnidad: form.estadoUnidad,
+        estadoUnidad: recibeVehiculo ? form.estadoUnidad : "",
         condiciones: form.condiciones,
         jurisdiccion: form.jurisdiccion,
       });
@@ -313,15 +315,17 @@ export function CompraventaFormulario({ ingresoId, ingreso, modalidad, contrato,
           </div>
         </Paso>
 
-        <Paso n={paso()} titulo="Estado y condiciones" ayuda="Lo que se imprime tal cual en el boleto.">
-          <Area
-            label="Estado de la unidad al recibirla"
-            valor={form.estadoUnidad}
-            onCambio={set("estadoUnidad")}
-            maximo={TOPE_LIBRE}
-            placeholder="Chapa, faltantes, cubiertas, rueda de auxilio…"
-            ayuda="Arranca con el estado cargado al crear el trámite. Los kilómetros salen del ingreso."
-          />
+        <Paso n={paso()} titulo={recibeVehiculo ? "Estado y condiciones" : "Condiciones"} ayuda="Lo que se imprime tal cual en el boleto.">
+          {recibeVehiculo && (
+            <Area
+              label="Estado de la unidad al recibirla"
+              valor={form.estadoUnidad}
+              onCambio={set("estadoUnidad")}
+              maximo={TOPE_LIBRE}
+              placeholder="Chapa, faltantes, cubiertas, rueda de auxilio…"
+              ayuda="Arranca con el estado cargado al crear el trámite. Los kilómetros salen del ingreso."
+            />
+          )}
           <Area
             label="Condiciones particulares"
             valor={form.condiciones}

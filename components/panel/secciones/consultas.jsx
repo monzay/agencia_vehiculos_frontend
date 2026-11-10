@@ -11,7 +11,6 @@ import { Boton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
 import { Insignia } from "../ui/insignia";
 import { PanelLateral } from "../ui/panel-lateral";
-import { ConsultasVenta } from "./consultas-venta";
 import { ChatConsulta } from "./chat-consulta";
 
 const PAGINA = 10; // tamaño del bloque de lazy loading
@@ -133,35 +132,9 @@ function datosDelCliente(c) {
   return [c.nombre || "Sin nombre", c.telefonoLocal, c.provincia, fechaHora(c.hora)].filter(Boolean).join(" · ");
 }
 
-// Tipo de consulta: las de compra (las del bot de siempre) o las de quienes
-// quieren vender su auto, en venta directa o en consignación.
-const FILTRO_TIPO = [
-  { valor: "compra", label: "Compra" },
-  { valor: "venta", label: "Venta directa" },
-  { valor: "consignacion", label: "Consignación" },
-];
-
-// `nuevoDesdeVenta`: marca de "nuevo" de las consultas de venta/consignación.
-export function SeccionConsultas({ nuevoDesdeVenta = null, ...props }) {
-  const [tipo, setTipo] = useState("compra");
-  return (
-    <div className="space-y-4">
-      <Pills etiqueta="Tipo" opciones={FILTRO_TIPO} valor={tipo} onCambio={setTipo} />
-      {tipo === "compra" ? (
-        <ConsultasCompra {...props} />
-      ) : (
-        <ConsultasVenta key={tipo} modalidad={tipo} busqueda={props.busqueda} nuevoDesde={nuevoDesdeVenta} />
-      )}
-    </div>
-  );
-}
-
 // `onAvanzar(sesionId)`: abre el menú de operaciones. `onVerAvance(avance)`: lleva a
 // lo que nació de la consulta. Los dos llegan solo si es admin.
-function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, abrirId = null, onAvanzar, onVerAvance }) {
-  // Con la repartición desactivada se oculta quién atiende cada consulta.
-  const columnas = mostrarAsesor ? COLUMNAS : COLUMNAS.filter((c) => c.label !== "Asesor asignado");
-
+export function SeccionConsultas({ busqueda, nuevoDesde = null, abrirId = null, onAvanzar, onVerAvance }) {
   // Consulta "nueva": iniciada después de la última revisión del usuario (nuevoDesde).
   const esNueva = (c) => nuevoDesde && c.hora && new Date(c.hora) > new Date(nuevoDesde);
 
@@ -263,7 +236,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
 
       {/* Desktop: tabla */}
       <div className="hidden md:block">
-        <Tabla columnas={columnas} vacio={items.length === 0} mensajeVacio="No hay consultas que coincidan.">
+        <Tabla columnas={COLUMNAS} vacio={items.length === 0} mensajeVacio="No hay consultas que coincidan.">
           {items.map((c) => (
                 <tr key={c.sesionId} className={cn(FILA, "cursor-pointer", estaAbierta(c) && "bg-secondary/60")} onClick={() => abrir(c.sesionId)}>
                   <td className={CELDA}>
@@ -282,15 +255,13 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                       <User className="w-3.5 h-3.5 text-muted-foreground" /> {c.nombre || "Sin nombre"}
                     </span>
                   </td>
-                  {mostrarAsesor && (
-                    <td className={CELDA}>
-                      {c.asesor ? (
-                        <Insignia variante="info"><UserCheck className="w-3 h-3" /> {c.asesor}</Insignia>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Sin asignar</span>
-                      )}
-                    </td>
-                  )}
+                  <td className={CELDA}>
+                    {c.asesor ? (
+                      <Insignia variante="info"><UserCheck className="w-3 h-3" /> {c.asesor}</Insignia>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin asignar</span>
+                    )}
+                  </td>
                   <td className={`${CELDA} text-muted-foreground whitespace-nowrap`}>
                     {c.telefonoLocal ? <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> {c.telefonoLocal}</span> : "—"}
                   </td>
@@ -355,9 +326,9 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
                     {c.clasificacion && <Insignia variante={CLASIF_VARIANTE[c.clasificacion] || "neutral"}>{c.clasificacion}</Insignia>}
                     <SemaforoCredito credito={c.credito} />
                     <InsigniaAvance avance={c.avance} />
-                    {mostrarAsesor && (c.asesor
+                    {c.asesor
                       ? <Insignia variante="info"><UserCheck className="w-3 h-3" /> {c.asesor}</Insignia>
-                      : <span className="text-xs text-muted-foreground">Sin asignar</span>)}
+                      : <span className="text-xs text-muted-foreground">Sin asignar</span>}
                   </div>
 
                   <div className="flex items-center justify-between gap-2 mt-2 text-xs text-muted-foreground">
@@ -402,7 +373,7 @@ function ConsultasCompra({ busqueda, mostrarAsesor = true, nuevoDesde = null, ab
             )}
             <SemaforoCredito credito={consultaAbierta.credito} />
             <InsigniaAvance avance={consultaAbierta.avance} />
-            {mostrarAsesor && consultaAbierta.asesor && (
+            {consultaAbierta.asesor && (
               <Insignia variante="info"><UserCheck className="w-3 h-3" /> {consultaAbierta.asesor}</Insignia>
             )}
             {botonAtendido(consultaAbierta)}

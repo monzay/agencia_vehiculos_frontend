@@ -7,7 +7,8 @@ import { Modal, ModalPie } from "../../ui/modal";
 import { Boton } from "../../ui/boton";
 import { Texto, Numero, Area, Alternador, Paso, Aviso } from "./campos";
 import { PersonaFormulario, aPersona } from "./persona-formulario";
-import { MODALIDAD } from "./modalidades";
+import { ayudaDeCarga } from "./buscador-persona";
+import { MODALIDAD, anticipoSugerido, seguirSugerencia } from "./modalidades";
 import { VehiculoQueCompra } from "./vehiculo-que-compra";
 import { LoQueDijo } from "./lo-que-dijo";
 
@@ -50,13 +51,14 @@ const aRecepcion = (i) => ({
 });
 
 // Lo que dijo el cliente sobre su usado, si avanzó desde una consulta. El valor de
-// toma no viene: lo decide la agencia.
-const recepcionDeConsulta = (usado) =>
+// toma no viene: lo decide la agencia. Sin usado, arranca con el anticipo del vehículo.
+const recepcionDeConsulta = (usado, anticipo) =>
   usado
     ? {
         ...RECEPCION_VACIA,
         entregaUsado: usado.entregaUsado,
         parteDePagoVehiculo: usado.vehiculo,
+        parteDePagoEfectivo: anticipoSugerido(usado.entregaUsado, anticipo),
         kmRecepcion: aTexto(usado.km),
         notas: usado.notas,
       }
@@ -105,10 +107,13 @@ export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerra
   const esContado = tipo === "contado";
   const esVenta = esParteDePago || esContado;
   const autoDeConsulta = precarga?.auto?.puedeVender ? precarga.auto : null;
+  const desdeConsulta = Boolean(precarga);
+  const quienFirma = esVenta ? "Quien compra el auto y firma el boleto." : "Quien entrega el auto y firma el contrato.";
 
   const [recepcion, setRecepcion] = useState(() =>
-    editando ? aRecepcion(ingreso) : recepcionDeConsulta(esParteDePago ? precarga?.parteDePago : null)
+    editando ? aRecepcion(ingreso) : recepcionDeConsulta(esParteDePago ? precarga?.parteDePago : null, autoDeConsulta?.anticipo)
   );
+  const [anticipoDelAuto, setAnticipoDelAuto] = useState(autoDeConsulta?.anticipo ?? null);
   const [titular, setTitular] = useState(() => aPersona(ingreso?.titular ?? precarga?.cliente));
   const [autoRef, setAutoRef] = useState(ingreso?.autoInteres?.ref ?? autoDeConsulta?.ref ?? "");
   // Firmado el boleto, o si el trámite nació de una seña, el auto ya no cambia.
@@ -117,6 +122,26 @@ export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerra
   const [guardando, setGuardando] = useState(false);
 
   const cambiarRecepcion = (campo) => (valor) => setRecepcion((r) => ({ ...r, [campo]: valor }));
+
+  // El anticipo propuesto depende del vehículo y de si entrega un usado. Solo en el
+  // alta: al editar, el monto ya es el acordado.
+  function actualizarAnticipo(entregaUsado, anticipo) {
+    setAnticipoDelAuto(anticipo);
+    setRecepcion((r) => ({
+      ...r,
+      entregaUsado,
+      parteDePagoEfectivo: editando
+        ? r.parteDePagoEfectivo
+        : seguirSugerencia(r.parteDePagoEfectivo, anticipoSugerido(r.entregaUsado, anticipoDelAuto), anticipoSugerido(entregaUsado, anticipo)),
+    }));
+  }
+
+  const cambiarEntregaUsado = (entregaUsado) => actualizarAnticipo(entregaUsado, anticipoDelAuto);
+
+  function cambiarAuto(ref, auto) {
+    setAutoRef(ref);
+    actualizarAnticipo(recepcion.entregaUsado, auto?.anticipo ?? null);
+  }
 
   async function guardar() {
     const problema = validar(recepcion, titular, esParteDePago, esVenta, autoRef);
@@ -177,7 +202,7 @@ export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerra
           >
             <VehiculoQueCompra
               valor={autoRef}
-              onCambio={setAutoRef}
+              onCambio={cambiarAuto}
               ingresoId={ingreso?.id ?? null}
               actual={ingreso?.autoInteres ?? autoDeConsulta}
               bloqueado={autoBloqueado}
@@ -188,27 +213,23 @@ export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerra
         <Paso
           n={paso()}
           titulo={esVenta ? "Comprador" : "Titular"}
-          ayuda={
-            esVenta
-              ? "Quien compra el auto y firma el boleto. Buscalo primero: puede que ya esté cargado."
-              : "Quien entrega el auto y firma el contrato. Buscalo primero: puede que ya esté cargado."
-          }
+          ayuda={`${quienFirma} ${ayudaDeCarga(desdeConsulta)}`}
           primero={!esVenta}
         >
-          <PersonaFormulario persona={titular} onCambio={setTitular} />
+          <PersonaFormulario persona={titular} onCambio={setTitular} conBuscador={!desdeConsulta} conCuenta={tipo === "consignacion"} />
         </Paso>
 
         {esParteDePago && (
           <Paso
             n={paso()}
-            titulo="Parte de pago"
+            titulo="Anticipo o parte de pago"
             ayuda="Lo que deja el cliente para comprar el auto. Con esto se calcula lo que queda por pagar y su financiación."
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Alternador
                 label="¿Entrega un vehículo?"
                 valor={recepcion.entregaUsado}
-                onCambio={cambiarRecepcion("entregaUsado")}
+                onCambio={cambiarEntregaUsado}
                 opciones={SI_NO}
               />
             </div>
@@ -234,11 +255,11 @@ export function IngresoFormulario({ ingreso, modalidad, precarga = null, onCerra
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Numero
-                label="Cuánto tiene para entregar ($)"
+                label="Anticipo o lo que tiene para entregar ($)"
                 valor={recepcion.parteDePagoEfectivo}
                 onCambio={cambiarRecepcion("parteDePagoEfectivo")}
                 placeholder="2.000.000"
-                ayuda="Vacío = no entrega plata."
+                ayuda="Sin usado, arranca con el anticipo del vehículo. Vacío = no entrega plata."
               />
             </div>
           </Paso>

@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { Search, Check, Loader2 } from "lucide-react";
 import { buscarPersonas } from "@/lib/api";
 
+// La ayuda del paso donde se carga a la persona. Si viene de una consulta ya se sabe
+// quién es, así que no se la manda a buscar.
+export const ayudaDeCarga = (desdeConsulta) =>
+  desdeConsulta ? "Los datos vienen de la consulta: revisalos y completá lo que falte." : "Buscalo primero: puede que ya esté cargado.";
+
 // Buscar a alguien entre los clientes que ya están en la base antes de cargarlo
 // de nuevo. Si esa persona escribió alguna vez por WhatsApp, su ficha ya existe:
 // reusarla evita tener al mismo cliente dos veces.

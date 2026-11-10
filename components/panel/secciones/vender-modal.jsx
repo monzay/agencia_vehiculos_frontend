@@ -42,8 +42,7 @@ export function VenderModal({ vehiculo, cargando, onConfirmar, onCancelar }) {
         {costo == null ? (
           <p className="text-xs text-muted-foreground">
             Este vehículo no tiene costo de compra cargado: la venta va a sumar facturación,
-            pero <strong className="text-foreground">0 de ganancia</strong>. Podés cargarlo
-            editando el vehículo.
+            pero <strong className="text-foreground">0 de ganancia</strong>.
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">

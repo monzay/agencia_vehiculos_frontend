@@ -326,7 +326,7 @@ export function SeccionAsesores({ asesores, busqueda, onRecargar, esAdmin = fals
                   <p className="text-muted-foreground mt-1">
                     El actual es <span className="font-mono text-foreground">/a/{original.slug}</span> y va a
                     dejar de funcionar. Todo lo que este asesor haya publicado en sus redes con ese link deja de
-                    identificarlo, y esas consultas pasan al reparto equitativo.
+                    identificarlo, y esas consultas pasan al reparto por turnos.
                   </p>
                   <p className="text-muted-foreground mt-1">
                     Si el asesor ya publicó su link, avisale que lo reemplace por el nuevo.

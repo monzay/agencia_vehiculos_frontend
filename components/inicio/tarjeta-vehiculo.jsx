@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Gauge, ArrowRight, Flame, Zap } from "lucide-react";
 import { tipoVehiculo } from "@/lib/tipos-vehiculo";
+import { etiquetaCombustible, tieneGnc } from "@/lib/combustibles";
 import { Boton } from "@/components/interfaz/boton";
 import { usarEnVista } from "@/hooks/usar-en-vista";
 import {
@@ -20,8 +21,6 @@ import {
 // El CTA solo lleva a la ficha /catalogo/{ref}. La consulta al BOT de WhatsApp
 // —con la REF, que es lo que permite a n8n atar el lead a este auto— vive en
 // detalle-vehiculo, ya dentro de la ficha.
-
-const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
 function TarjetaVehiculo({ vehicle, index = 0 }) {
   const { ref, estaVisible } = usarEnVista();
@@ -89,15 +88,15 @@ function TarjetaVehiculo({ vehicle, index = 0 }) {
             {vehicle.combustible && (
               <span
                 className={`flex items-center gap-1 sm:gap-1.5 font-medium ${
-                  vehicle.combustible === "gnc" ? "text-brand" : ""
+                  tieneGnc(vehicle.combustible) ? "text-brand" : ""
                 }`}
               >
-                {vehicle.combustible === "gnc" ? (
+                {tieneGnc(vehicle.combustible) ? (
                   <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 ) : (
                   <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 )}
-                {COMBUSTIBLE[vehicle.combustible]}
+                {etiquetaCombustible(vehicle.combustible)}
               </span>
             )}
           </div>

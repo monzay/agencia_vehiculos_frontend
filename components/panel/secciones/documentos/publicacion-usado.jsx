@@ -1,19 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Check, ExternalLink, Globe, Loader2, X } from "lucide-react";
+import { Check, Globe, Loader2, X } from "lucide-react";
 import { obtenerPreparacion, actualizarPreparacion, publicarPreparacion, despublicarPreparacion, actualizarIngreso } from "@/lib/api";
 import { Boton } from "../../ui/boton";
 import { Insignia } from "../../ui/insignia";
 import { ConfirmarModal } from "../../ui/confirmar-modal";
-import { Aviso, Numero, Area, Selector } from "../documentos/campos";
-import { FotosVehiculo, aFotos, listaDeFotos } from "../documentos/fotos-vehiculo";
-import { pesos } from "../documentos/impresos/etiquetas";
+import { Aviso, Numero, Area, Selector } from "./campos";
+import { FotosVehiculo, aFotos, listaDeFotos } from "./fotos-vehiculo";
+import { pesos } from "./impresos/etiquetas";
 
-// La ficha de un usado: qué le falta para salir a la web, y lo que se carga para
-// publicarlo. El backend decide si se puede: acá se muestra lo que responde.
+// Pestaña del legajo de un usado recibido: qué le falta para salir a la web, y lo que
+// se carga para publicarlo. El backend decide si se puede: acá se muestra lo que responde.
 
-export const ETAPAS = {
+const ETAPAS = {
   recibido: { label: "Recibido", variante: "neutral" },
   en_preparacion: { label: "En preparación", variante: "alerta" },
   listo: { label: "Listo", variante: "info" },
@@ -21,11 +21,11 @@ export const ETAPAS = {
   vendido: { label: "Vendido", variante: "exito" },
 };
 
-export const ORIGENES = { compra: "Compra", permuta: "Parte de pago" };
+const ORIGENES = { compra: "Compra", permuta: "Parte de pago" };
 
 const AVANCES = ["recibido", "en_preparacion", "listo"].map((valor) => ({ valor, label: ETAPAS[valor].label }));
 
-export const tituloUsado = ({ marca, modelo, anio }) => [marca, modelo, anio].filter(Boolean).join(" ") || "Sin título cargado";
+const tituloUsado = ({ marca, modelo, anio }) => [marca, modelo, anio].filter(Boolean).join(" ") || "Sin título cargado";
 
 const aFormulario = (p) => ({ avance: p.avance, precio: p.precioVenta != null ? String(p.precioVenta) : "", descripcion: p.descripcion ?? "" });
 
@@ -66,7 +66,8 @@ function Datos({ p, esAdmin }) {
   );
 }
 
-export function FichaPreparacion({ preparacionId, esAdmin, onVolver, onAbrirTramite, onCambio }) {
+// `onCambio`: refresca el legajo, que muestra si ya salió a la web.
+export function PublicacionUsado({ preparacionId, esAdmin, onCambio }) {
   const [p, setP] = useState(null);
   const [form, setForm] = useState(null);
   const [error, setError] = useState(null);
@@ -138,17 +139,6 @@ export function FichaPreparacion({ preparacionId, esAdmin, onVolver, onAbrirTram
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Boton variante="fantasma" tamano="sm" className="gap-1.5" onClick={onVolver}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Volver
-        </Boton>
-        {esAdmin && (
-          <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => onAbrirTramite?.({ id: p.ingresoId, modalidad: p.origen })}>
-            <ExternalLink className="w-3.5 h-3.5" /> Ver legajo
-          </Boton>
-        )}
-      </div>
-
       {error && <Aviso>{error}</Aviso>}
 
       <section className="rounded-xl border border-border bg-card p-4 space-y-4">

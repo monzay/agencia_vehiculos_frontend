@@ -26,6 +26,7 @@ const COLUMNAS = [
   { label: "Papeles" },
   { label: "Originales" },
   { label: "Contrato" },
+  { label: "Próximo paso" },
   { label: "Estado" },
 ];
 
@@ -35,7 +36,8 @@ const ESTADOS = [
   { valor: "retirado", label: "Retirados" },
   { valor: "vendido", label: "Vendidos" },
 ];
-const FILTROS = [{ valor: "", label: "Todos" }, ...ESTADOS];
+// "En curso": lo que todavía tiene algo por hacer, en cualquier modalidad.
+const FILTROS_BASE = [{ valor: "", label: "Todos" }, { valor: "en_curso", label: "En curso" }];
 const LABEL_ESTADO = Object.fromEntries(ESTADOS.map((e) => [e.valor, e.label]));
 const VARIANTE_ESTADO = { recepcion: "info", publicado: "exito", retirado: "neutral", vendido: "exito" };
 
@@ -93,10 +95,12 @@ function ListaIngresos({ modalidad, busqueda, onAbrir }) {
     { limite: PAGINA }
   );
 
-  const vacio = `Todavía no se registró ninguna ${MODALIDAD[modalidad].label.toLowerCase()}.`;
+  const vacio = estado
+    ? "No hay trámites con este filtro."
+    : `Todavía no se registró ninguna ${MODALIDAD[modalidad].label.toLowerCase()}.`;
   // Publicado y retirado son estados de la consignación: un auto comprado o
   // tomado en parte de pago ya es de la agencia y no pasa por ahí.
-  const filtros = modalidad === "consignacion" ? FILTROS : [];
+  const filtros = modalidad === "consignacion" ? [...FILTROS_BASE, ...ESTADOS] : FILTROS_BASE;
 
   return (
     <div className="space-y-4">
@@ -162,6 +166,7 @@ function ListaIngresos({ modalidad, busqueda, onAbrir }) {
                         <span className="text-xs text-muted-foreground">Sin firmar</span>
                       )}
                     </td>
+                    <td className={`${CELDA} text-xs text-muted-foreground`}>{i.proximoPaso ?? "Terminado"}</td>
                     <td className={`${CELDA} whitespace-nowrap`}>
                       <Insignia variante={VARIANTE_ESTADO[i.estado] ?? "neutral"}>{LABEL_ESTADO[i.estado] ?? i.estado}</Insignia>
                     </td>
@@ -193,6 +198,7 @@ function ListaIngresos({ modalidad, busqueda, onAbrir }) {
                   <p className="text-xs text-muted-foreground">
                     {[vehiculoDelTramite(i).dominio, nombreCompleto(i.titular)].filter(Boolean).join(" · ")}
                   </p>
+                  <p className="text-xs text-foreground">Próximo paso: {i.proximoPaso ?? "terminado"}</p>
                   <div className="flex items-center justify-between text-xs">
                     {i.conUsado ? (
                       <span className="inline-flex items-center gap-3">
@@ -225,7 +231,7 @@ function ListaIngresos({ modalidad, busqueda, onAbrir }) {
 
 // `abrirTramite`: { id, modalidad } de un trámite a abrir de entrada (recién
 // creado en Trámites, o iniciado desde una seña).
-export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite = null, onVerPreparacion }) {
+export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite = null }) {
   const [modalidad, setModalidad] = useState(abrirTramite?.modalidad ?? MODALIDADES[0].id);
   const [catalogo, setCatalogo] = useState(null);
   const [abierto, setAbierto] = useState(abrirTramite?.id ?? null); // id del ingreso en detalle
@@ -287,7 +293,6 @@ export function SeccionDocumentos({ busqueda = "", esAdmin = false, abrirTramite
             onVolver={() => setAbierto(null)}
             onEditar={setEditando}
             onCambio={() => setRecarga((n) => n + 1)}
-            onVerPreparacion={onVerPreparacion}
           />
         ) : (
           <ListaIngresos key={`${modalidad}-${recarga}`} modalidad={modalidad} busqueda={busqueda} onAbrir={setAbierto} />

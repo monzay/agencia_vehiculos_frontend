@@ -47,12 +47,41 @@ export const aPersona = (p) =>
 
 const OPCIONES_PROVINCIA = PROVINCIAS.map((p) => ({ valor: p, label: p }));
 
-export function PersonaFormulario({ persona, onCambio }) {
+// Adónde se le paga al titular: solo en la consignación, que es cuando se le transfiere.
+function CamposDeCuenta({ persona, set }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border">
+      <Texto
+        label="CBU"
+        valor={persona.cbu}
+        onCambio={set("cbu")}
+        placeholder="22 dígitos"
+        inputMode="numeric"
+        ayuda="Acá se le transfiere cuando el auto se venda."
+      />
+      <Texto label="Alias" valor={persona.aliasCbu} onCambio={set("aliasCbu")} placeholder="mi.alias.banco" />
+      {(persona.cbu.trim() || persona.aliasCbu.trim()) && (
+        <Texto
+          label="Banco o billetera"
+          valor={persona.bancoCbu}
+          onCambio={set("bancoCbu")}
+          placeholder="Banco Nación, Mercado Pago…"
+          ayuda="De qué banco o medio de pago es la cuenta."
+          className="sm:col-span-2"
+        />
+      )}
+    </div>
+  );
+}
+
+// `conBuscador`: en false cuando ya se sabe quién es (se avanzó desde una consulta).
+// `conCuenta`: pide CBU y alias, solo para una consignación.
+export function PersonaFormulario({ persona, onCambio, conBuscador = true, conCuenta = false }) {
   const set = (campo) => (valor) => onCambio({ ...persona, [campo]: valor });
 
   return (
     <div className="space-y-3">
-      <BuscadorPersona onElegir={(encontrada) => onCambio(aPersona(encontrada))} />
+      {conBuscador && <BuscadorPersona onElegir={(encontrada) => onCambio(aPersona(encontrada))} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Texto label="Nombre" valor={persona.nombre} onCambio={set("nombre")} placeholder="Juan" />
@@ -66,27 +95,7 @@ export function PersonaFormulario({ persona, onCambio }) {
         <Selector label="Provincia" valor={persona.provincia} onCambio={set("provincia")} opciones={OPCIONES_PROVINCIA} vacio="Sin especificar" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border">
-        <Texto
-          label="CBU"
-          valor={persona.cbu}
-          onCambio={set("cbu")}
-          placeholder="22 dígitos"
-          inputMode="numeric"
-          ayuda="Acá se le transfiere cuando el auto se venda."
-        />
-        <Texto label="Alias" valor={persona.aliasCbu} onCambio={set("aliasCbu")} placeholder="mi.alias.banco" />
-        {(persona.cbu.trim() || persona.aliasCbu.trim()) && (
-          <Texto
-            label="Banco o billetera"
-            valor={persona.bancoCbu}
-            onCambio={set("bancoCbu")}
-            placeholder="Banco Nación, Mercado Pago…"
-            ayuda="De qué banco o medio de pago es la cuenta."
-            className="sm:col-span-2"
-          />
-        )}
-      </div>
+      {conCuenta && <CamposDeCuenta persona={persona} set={set} />}
 
       {/* Alguien cercano a quien llamar si el titular no atiende */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border">

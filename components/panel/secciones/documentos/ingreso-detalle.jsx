@@ -20,7 +20,6 @@ import {
   HandCoins,
   BookmarkCheck,
   XCircle,
-  Wrench,
 } from "lucide-react";
 import {
   obtenerIngreso,
@@ -44,6 +43,7 @@ import { RequisitosContrato, PapelesObligatorios } from "./requisitos-contrato";
 import { PublicarModal } from "./publicar-modal";
 import { FinanciacionModal } from "./financiacion-modal";
 import { CierreVenta } from "./cierre-venta";
+import { PublicacionUsado } from "./publicacion-usado";
 import { VINCULO } from "./vinculos";
 import { CONTRATOS } from "./contratos";
 import { MODALIDAD, vendeLaAgencia } from "./modalidades";
@@ -77,13 +77,15 @@ const FILAS = [
     label: "Tel. alternativo",
     valor: (p) => p.contactoAlternativo && `${p.contactoAlternativo.telefono} · ${VINCULO[p.contactoAlternativo.vinculo]}`,
   },
-  // Adónde se le paga al titular: el CBU y su alias, lo que haya.
-  { label: "CBU / Alias", valor: (p) => [p.cbu, p.aliasCbu, p.bancoCbu].filter(Boolean).join(" · ") || null },
 ];
+
+// Adónde se le paga al titular: solo en la consignación, que es cuando se le transfiere.
+const FILA_CUENTA = { label: "CBU / Alias", valor: (p) => [p.cbu, p.aliasCbu, p.bancoCbu].filter(Boolean).join(" · ") || null };
 
 // Los datos del titular, rótulo a la izquierda y valor a la derecha. Una sola
 // grilla sirve para cualquier ancho de pantalla.
-function Titular({ persona }) {
+function Titular({ persona, conCuenta }) {
+  const filas = conCuenta ? [...FILAS, FILA_CUENTA] : FILAS;
   return (
     <div>
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Titular</p>
@@ -92,7 +94,7 @@ function Titular({ persona }) {
         {persona ? nombreCompleto(persona) : <span className="text-muted-foreground">Sin cargar</span>}
       </p>
       {persona &&
-        FILAS.map(({ label, valor }) => (
+        filas.map(({ label, valor }) => (
           <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-x-4 py-1 border-t border-border">
             <span className="text-xs text-muted-foreground">{label}</span>
             <span className="text-xs text-foreground">{valor(persona) || <span className="text-muted-foreground">—</span>}</span>
@@ -134,11 +136,11 @@ function ParteDePago({ datos, sena }) {
     ...(sena ? [{ label: "Seña", valor: `${pesos(sena.monto)} · ${fechaDeMomento(sena.senado)}` }] : []),
     { label: "Vehículo que deja", valor: datos.vehiculo || "No entrega vehículo" },
     { label: "Valor de toma", valor: datos.valor != null ? pesos(datos.valor) : null },
-    { label: "Tiene para entregar", valor: datos.efectivo != null ? pesos(datos.efectivo) : null },
+    { label: "Anticipo o entrega", valor: datos.efectivo != null ? pesos(datos.efectivo) : null },
   ];
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Parte de pago</p>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Anticipo o parte de pago</p>
       {filas.map(({ label, valor }) => (
         <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-x-4 py-1 border-t border-border">
           <span className="text-xs text-muted-foreground">{label}</span>
@@ -197,7 +199,7 @@ function PrecioDeVenta({ precio, beneficios }) {
 
 // `version` cambia cuando el ingreso se edita afuera (el modal de Editar
 // ingreso): sin recargar, el detalle y el próximo Editar mostrarían datos viejos.
-export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio, onVerPreparacion }) {
+export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver, onEditar, onCambio }) {
   const [ingreso, setIngreso] = useState(null);
   const [error, setError] = useState(null);
   const [pestana, setPestana] = useState("papeles");
@@ -282,7 +284,7 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
     cobrado: () => setHitoAMarcar("cobrado"),
     entregado: () => setHitoAMarcar("entregado"),
     transferido: () => setHitoAMarcar("transferido"),
-    preparacion: () => onVerPreparacion?.(ingreso.preparacion.id),
+    preparacion: () => setPestana("publicacion"),
   };
 
   // El backend dice si se puede: si no, muestra qué hacer primero.
@@ -346,7 +348,11 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
   // La agencia vende un auto propio (contado o parte de pago): se vende desde acá.
   const autoVendido = vendeLaAgencia(ingreso.modalidad) ? ingreso.autoInteres : null;
   // Sin usado no hay papeles del cliente: el legajo es solo el boleto.
-  const pestanas = ingreso.conUsado ? PESTANAS : PESTANAS.filter((p) => p.id !== "papeles");
+  // Un usado ya recibido (boleto firmado) se prepara y se publica desde acá.
+  const pestanas = [
+    ...(ingreso.conUsado ? PESTANAS : PESTANAS.filter((p) => p.id !== "papeles")),
+    ...(ingreso.preparacion ? [{ id: "publicacion", label: "Publicación" }] : []),
+  ];
   const pestanaActual = pestanas.some((p) => p.id === pestana) ? pestana : "contrato";
   return (
     <div className="space-y-4">
@@ -369,19 +375,6 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
               <HandCoins className="w-3.5 h-3.5" /> Financiación
               {ingreso.financiacion && <Check className="w-3.5 h-3.5 text-emerald-500" />}
             </Boton>
-          )}
-          {ingreso.preparacion && onVerPreparacion && (
-            <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => onVerPreparacion(ingreso.preparacion.id)}>
-              <Wrench className="w-3.5 h-3.5" /> Preparación del usado
-            </Boton>
-          )}
-          {ingreso.sesionId && (
-            <a
-              href={`/admin/${ingreso.sesionId}`}
-              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
-            >
-              Ver consulta
-            </a>
           )}
           {/* Lo que ya tuvo ficha en la web se cierra con Marcar retirado. */}
           {esAdmin && ingreso.estado !== "vendido" && !ingreso.consignacionId && (
@@ -549,7 +542,7 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 pt-3 border-t border-border">
-          <Titular persona={ingreso.titular} />
+          <Titular persona={ingreso.titular} conCuenta={esConsignacion} />
           <div className="space-y-4">
             <Fechas ingreso={ingreso} />
             {ingreso.parteDePago && <ParteDePago datos={ingreso.parteDePago} sena={ingreso.sena} />}
@@ -587,6 +580,8 @@ export function IngresoDetalle({ ingresoId, version, catalogo, esAdmin, onVolver
       </div>
 
       {pestanaActual === "papeles" && <Papeles ingreso={ingreso} catalogo={catalogo} esAdmin={esAdmin} onCambio={refrescar} />}
+
+      {pestanaActual === "publicacion" && <PublicacionUsado preparacionId={ingreso.preparacion.id} esAdmin={esAdmin} onCambio={refrescar} />}
 
       {/* Solo la consignación trae requisitos: compra y parte de pago no. */}
       {pestanaActual === "contrato" && ingreso.requisitosContrato && <PapelesObligatorios requisitos={ingreso.requisitosContrato} />}

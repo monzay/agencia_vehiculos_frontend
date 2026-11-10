@@ -18,10 +18,10 @@ import {
   ChevronLeft,
   PanelLeft,
   X,
-  Wrench,
 } from "lucide-react";
 
 // `soloAdmin` = el ítem solo se muestra al rol admin.
+// `cerrada` = la sección sale del menú por ahora; lo ya cargado sigue vigente.
 const items = [
   { id: "resumen", label: "Resumen", icon: LayoutDashboard },
   { id: "consultas", label: "Consultas", icon: MessageSquare },
@@ -31,10 +31,9 @@ const items = [
   { id: "financiacion", label: "Financiación", icon: HandCoins, soloAdmin: true },
   { id: "senas", label: "Señas", icon: BookmarkCheck, soloAdmin: true },
   { id: "documentos", label: "Documentos", icon: FileText, soloAdmin: true },
-  { id: "preparacion", label: "Preparación", icon: Wrench },
   { id: "vehiculos", label: "Vehículos", icon: Car },
   { id: "contabilidad", label: "Contabilidad", icon: Calculator, soloAdmin: true },
-  { id: "descuentos", label: "Descuentos/Promos", icon: BadgePercent },
+  { id: "descuentos", label: "Descuentos/Promos", icon: BadgePercent, cerrada: true },
   { id: "asesores", label: "Asesores", icon: UserCog },
   { id: "entregas", label: "Entregas", icon: Images, soloAdmin: true },
   { id: "configuracion", label: "Configuración", icon: Settings, soloAdmin: true },
@@ -42,7 +41,7 @@ const items = [
 
 // `novedades` = { [id de sección]: cantidad } → badge rojo en el ítem.
 export function BarraLateral({ seccion, onSeccion, colapsada, onColapsar, esAdmin, abierta = false, onCerrar, novedades = {} }) {
-  const visibles = items.filter((it) => !it.soloAdmin || esAdmin);
+  const visibles = items.filter((it) => !it.cerrada && (!it.soloAdmin || esAdmin));
 
   // En móvil: drawer off-canvas (translate) de ancho fijo, siempre expandido.
   // En desktop (lg): siempre visible y colapsable a 72px.

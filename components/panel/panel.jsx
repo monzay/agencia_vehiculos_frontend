@@ -25,10 +25,8 @@ import { AvanzarConsulta } from "./secciones/avanzar-consulta";
 import { SeccionClientes } from "./secciones/clientes";
 import { SeccionFinanciacion } from "./secciones/financiacion";
 import { SeccionTramites } from "./secciones/tramites";
-import { SeccionConsignaciones } from "./secciones/consignaciones";
 import { SeccionDocumentos } from "./secciones/documentos";
 import { SeccionSenas } from "./secciones/senas";
-import { SeccionPreparacion } from "./secciones/preparacion";
 import { SeccionAsesores } from "./secciones/asesores";
 import { SeccionEntregas } from "./secciones/entregas";
 import { SeccionVehiculos } from "./secciones/vehiculos";
@@ -38,12 +36,7 @@ import { SeccionConfiguracion } from "./secciones/configuracion";
 
 // Secciones con badge de novedades en el sidebar. Deben coincidir con las que
 // acepta /api/novedades/:seccion.
-const SECCIONES_CON_NOVEDADES = ["consultas", "ventas", "clientes", "financiacion", "descuentos"];
-
-// Las consultas de venta/consignación ("ventas" en novedades) se ven dentro de
-// Consultas: su badge se suma al de Consultas y se marcan vistas juntas.
-const VISTAS_JUNTAS = { consultas: ["consultas", "ventas"] };
-const conVentasEnConsultas = (n) => ({ ...n, consultas: (n.consultas ?? 0) + (n.ventas ?? 0) });
+const SECCIONES_CON_NOVEDADES = ["consultas", "clientes", "financiacion", "descuentos"];
 
 // `consultaId` viene de /admin/<sesionId>, el link de los avisos de lead a
 // Telegram: entra directo a Consultas con esa consulta ya abierta.
@@ -58,8 +51,6 @@ export function Panel({ consultaId = null }) {
   const [tramiteAAbrir, setTramiteAAbrir] = useState(null);
   // La consulta que está avanzando el admin (botón Avanzar).
   const [consultaAAvanzar, setConsultaAAvanzar] = useState(null);
-  // La preparación a abrir al entrar a Preparación: la pide el legajo.
-  const [preparacionAAbrir, setPreparacionAAbrir] = useState(null);
 
   const [usuario, setUsuario] = useState(null); // { id, nombre, rol }
   const [verificando, setVerificando] = useState(true);
@@ -79,7 +70,7 @@ export function Panel({ consultaId = null }) {
   const [refrescar, setRefrescar] = useState(0);
 
   // Novedades por sección desde la última revisión del usuario (badge del sidebar).
-  // Los tres mapas van keyeados por sección: { consultas: …, ventas: … }.
+  // Los tres mapas van keyeados por sección: { consultas: …, clientes: … }.
   const [novedades, setNovedades] = useState({});   // cuántas hay ahora
   const [vistoAt, setVistoAt] = useState({});       // marca del server
   const [nuevoDesde, setNuevoDesde] = useState({}); // marca "congelada" al entrar (resalta filas)
@@ -100,10 +91,6 @@ export function Panel({ consultaId = null }) {
     setConsultaAAvanzar(null);
     setTramiteAAbrir(tramite);
     setSeccion("documentos");
-  };
-  const verPreparacion = (id) => {
-    setPreparacionAAbrir(id);
-    setSeccion("preparacion");
   };
   const verAvance = (avance) => (avance.tipo === "tramite" ? irAlTramite({ id: avance.id, modalidad: avance.modalidad }) : irASenas());
 
@@ -180,13 +167,10 @@ export function Panel({ consultaId = null }) {
   // filas nuevas de esta visita) y marco "visto ahora" (resetea el contador).
   useEffect(() => {
     if (!usuario || !SECCIONES_CON_NOVEDADES.includes(seccion)) return;
-    const secciones = VISTAS_JUNTAS[seccion] ?? [seccion];
-    setNuevoDesde((prev) => ({ ...prev, ...Object.fromEntries(secciones.map((s) => [s, vistoAt[s] ?? null])) }));
-    secciones.forEach((s) =>
-      marcarSeccionVista(s)
-        .then(() => setNovedades((prev) => ({ ...prev, [s]: 0 })))
-        .catch(() => {})
-    );
+    setNuevoDesde((prev) => ({ ...prev, [seccion]: vistoAt[seccion] ?? null }));
+    marcarSeccionVista(seccion)
+      .then(() => setNovedades((prev) => ({ ...prev, [seccion]: 0 })))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccion, usuario]);
 
@@ -207,7 +191,6 @@ export function Panel({ consultaId = null }) {
           setSeccion(s);
           setTramiteAAbrir(null);
           setConsultaAAvanzar(null);
-          setPreparacionAAbrir(null);
           setMenuMovil(false);
         }}
         colapsada={colapsada}
@@ -215,7 +198,7 @@ export function Panel({ consultaId = null }) {
         esAdmin={esAdmin}
         abierta={menuMovil}
         onCerrar={() => setMenuMovil(false)}
-        novedades={conVentasEnConsultas(novedades)}
+        novedades={novedades}
       />
 
       {/* Backdrop del drawer en móvil */}
@@ -251,9 +234,7 @@ export function Panel({ consultaId = null }) {
               {seccion === "consultas" && (
                 <SeccionConsultas
                   busqueda={busqueda}
-                  mostrarAsesor={config?.reparticion_equitativa !== false}
                   nuevoDesde={nuevoDesde.consultas}
-                  nuevoDesdeVenta={nuevoDesde.ventas}
                   abrirId={consultaId}
                   onAvanzar={esAdmin ? setConsultaAAvanzar : undefined}
                   onVerAvance={esAdmin ? verAvance : undefined}
@@ -265,9 +246,6 @@ export function Panel({ consultaId = null }) {
               )}
               {seccion === "tramites" && esAdmin && (
                 <SeccionTramites onSenaCreada={irASenas} onTramiteCreado={irAlTramite} />
-              )}
-              {seccion === "consignaciones" && (
-                <SeccionConsignaciones busqueda={busqueda} esAdmin={esAdmin} vehiculos={vehiculos} />
               )}
               {seccion === "senas" && esAdmin && (
                 <SeccionSenas
@@ -282,11 +260,7 @@ export function Panel({ consultaId = null }) {
                   busqueda={busqueda}
                   esAdmin={esAdmin}
                   abrirTramite={tramiteAAbrir}
-                  onVerPreparacion={verPreparacion}
                 />
-              )}
-              {seccion === "preparacion" && (
-                <SeccionPreparacion busqueda={busqueda} esAdmin={esAdmin} abrirId={preparacionAAbrir} onAbrirTramite={irAlTramite} />
               )}
               {seccion === "vehiculos" && <SeccionVehiculos vehiculos={vehiculos} busqueda={busqueda} onRecargar={cargar} esAdmin={esAdmin} />}
               {seccion === "contabilidad" && esAdmin && <SeccionContabilidad />}

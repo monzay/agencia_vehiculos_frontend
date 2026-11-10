@@ -31,7 +31,7 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
 
   const sinCambios = nombre.trim() === (usuario?.nombre || "") && email.trim() === (usuario?.email || "");
   const repartoActivo = config?.reparticion_equitativa !== false;
-  // Se excluye la cuenta del admin: es el fallback, no entra al round-robin.
+  // Se excluye la cuenta del admin: no entra al turno.
   const asesoresReparto = asesores.filter((a) => !a.esAdmin);
   const activosEnReparto = asesoresReparto.filter((a) => a.activo && a.recibeConsultas).length;
 
@@ -142,11 +142,11 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
             {/* Toggle global */}
             <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-secondary/40 p-4">
               <div className="space-y-1 min-w-0">
-                <Label htmlFor="cfg-reparto">Repartición equitativa</Label>
+                <Label htmlFor="cfg-reparto">Reparto por turnos</Label>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {repartoActivo
-                    ? "Activada: se muestra qué asesor atiende cada consulta."
-                    : "Desactivada: se sigue asignando, pero no se muestra quién atiende."}
+                    ? "Activado: las consultas que llegan sin link se reparten por turnos entre los asesores habilitados. Las que llegan por el link de un asesor son siempre suyas."
+                    : "Desactivado: las consultas que llegan sin link quedan sin asignar. Las que llegan por el link de un asesor siguen siendo suyas."}
                 </p>
               </div>
               <Switch id="cfg-reparto" checked={repartoActivo} onCheckedChange={toggleReparto} disabled={guardandoReparto} />
@@ -189,7 +189,7 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
               )}
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Los asesores excluidos no reciben consultas nuevas. Si ninguno participa, las consultas van al administrador.
+                Un asesor excluido no recibe consultas del turno, pero sí las de su propio link. Si ninguno participa, las consultas sin link quedan sin asignar.
               </p>
             </div>
 

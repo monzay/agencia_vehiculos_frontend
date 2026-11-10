@@ -6,9 +6,8 @@ import { ArrowUpRight } from "lucide-react";
 import { obtenerNombreCompletoVehiculo, formatearPrecio } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
+import { etiquetaCombustible } from "@/lib/combustibles";
 import { subida } from "./movimiento";
-
-const COMBUSTIBLE = { nafta: "Nafta", gnc: "GNC", diesel: "Diésel" };
 
 // "DD/MM" para la vigencia del beneficio (fechas etiquetadas UTC).
 function fechaCorta(iso) {
@@ -32,7 +31,7 @@ function lineaTecnica(vehiculo) {
   return [
     vehiculo.year,
     sinKms ? null : `${vehiculo.kms.toLocaleString("es-AR")} km`,
-    COMBUSTIBLE[vehiculo.combustible],
+    etiquetaCombustible(vehiculo.combustible),
   ]
     .filter(Boolean)
     .join(" / ");

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Package } from "lucide-react";
 import { tipoVehiculo } from "@/lib/tipos-vehiculo";
+import { etiquetaCombustible } from "@/lib/combustibles";
 import { Boton } from "@/components/interfaz/boton";
 import {
   obtenerNombreCompletoVehiculo,
@@ -11,12 +12,11 @@ import {
   fechaCorta,
   etiquetaDescuento,
   etiquetaPromo,
+  condicionesDePago,
 } from "@/lib/vehiculos";
 import { obtenerUrlWhatsAppBotVehiculo } from "@/lib/constantes";
 import { useNombreAgencia } from "@/lib/negocio";
 import { obtenerVehiculo, registrarVistaVehiculo } from "@/lib/api";
-
-const COMBUSTIBLE = { gnc: "GNC", diesel: "Diésel", nafta: "Nafta" };
 
 // Fila de ficha técnica: regla superior, icono rojo, rótulo mono y valor. Es la
 // misma pieza que usa la sección de contacto de la portada.
@@ -118,6 +118,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
   const sinKm = vehiculo.condicion === "usado" && vehiculo.kms === 0;
   const descuento = vehiculo.ahorro > 0 ? vehiculo.descuento : null;
   const promos = vehiculo.promociones ?? [];
+  const condiciones = condicionesDePago(vehiculo);
   const tipo = tipoVehiculo(vehiculo.tipo);
   const nombreAgencia = useNombreAgencia();
 
@@ -182,7 +183,7 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
           <Especificacion icon={Gauge} rotulo="Kilómetros">
             {sinKm ? "0 km" : `${vehiculo.kms.toLocaleString("es-AR")} km`}
           </Especificacion>
-          <Especificacion icon={Fuel} rotulo="Combustible">{COMBUSTIBLE[vehiculo.combustible] ?? "—"}</Especificacion>
+          <Especificacion icon={Fuel} rotulo="Combustible">{etiquetaCombustible(vehiculo.combustible) ?? "—"}</Especificacion>
           <Especificacion icon={tipo.icono} rotulo="Condición">
             {vehiculo.condicion === "0km" ? "0 km" : "Usado"}
           </Especificacion>
@@ -261,6 +262,17 @@ function DetalleContenido({ vehiculo, fotoActiva, setFotoActiva }) {
             )
           ) : (
             <p className="mb-6 text-2xl font-display text-muted-foreground">A consultar</p>
+          )}
+
+          {condiciones.length > 0 && (
+            <dl className="mb-6 grid max-w-md grid-cols-1 gap-x-6 gap-y-4 border-t border-border pt-4 min-[400px]:grid-cols-2">
+              {condiciones.map(({ rotulo, valor }) => (
+                <div key={rotulo}>
+                  <dt className="font-mono text-[10px] tracking-[0.22em] uppercase text-muted-foreground">{rotulo}</dt>
+                  <dd className="mt-1.5 text-xl font-display tracking-tight text-foreground">{formatearPrecio(valor)}</dd>
+                </div>
+              ))}
+            </dl>
           )}
 
           <Boton

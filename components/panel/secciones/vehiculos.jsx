@@ -12,6 +12,7 @@ import { Overlay } from "../ui/overlay";
 import { fechaCorta } from "./senas/formato";
 import { Campo, CampoNumero } from "../ui/campo";
 import { ImportarLista } from "./vehiculos/importar-lista";
+import { EliminarVehiculo } from "./vehiculos/eliminar-vehiculo";
 import { TIPOS_VEHICULO, tipoVehiculo } from "@/lib/tipos-vehiculo";
 import { COMBUSTIBLES, etiquetaCombustible } from "@/lib/combustibles";
 
@@ -356,6 +357,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
         <button onClick={() => abrirEdicion(v)} title="Editar" className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-accent/50 transition-colors">
           <Pencil className="w-3.5 h-3.5" />
         </button>
+        <EliminarVehiculo vehiculo={v} onRecargar={onRecargar} />
       </div>
     );
   };

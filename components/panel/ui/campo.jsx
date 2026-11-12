@@ -1,5 +1,6 @@
 "use client";
 
+import { CampoContrasena } from "@/components/interfaz/campo-contrasena";
 import { combinadorClases as cn } from "@/lib/utilidades";
 import { conPuntosDeMiles, soloDigitos, aDigitos } from "@/lib/numeros";
 
@@ -15,15 +16,26 @@ export function Campo({ label, valor, onCambio, placeholder, tipo = "text", auto
       {label && (
         <span className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</span>
       )}
-      <input
-        type={tipo}
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        inputMode={inputMode}
-        className={cn(CLASE_INPUT, "h-9")}
-      />
+      {tipo === "password" ? (
+        <CampoContrasena
+          value={valor}
+          onChange={(e) => onCambio(e.target.value)}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          autoComplete="new-password"
+          className={cn(CLASE_INPUT, "h-9")}
+        />
+      ) : (
+        <input
+          type={tipo}
+          value={valor}
+          onChange={(e) => onCambio(e.target.value)}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          inputMode={inputMode}
+          className={cn(CLASE_INPUT, "h-9")}
+        />
+      )}
     </label>
   );
 }

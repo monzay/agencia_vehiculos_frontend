@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Loader2, Car } from "lucide-react";
 import { login, getToken } from "@/lib/api";
+import { CampoContrasena } from "@/components/interfaz/campo-contrasena";
 
 // Formulario de inicio de sesión del panel. Compartido por las rutas /login y
 // /financiacion/login para no duplicar el markup ni la lógica de auth.
@@ -58,11 +59,11 @@ export function FormularioLogin() {
           </label>
           <label className="block">
             <span className="block text-xs font-medium text-muted-foreground mb-1.5">Contraseña</span>
-            <input
-              type="password"
+            <CampoContrasena
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               placeholder="••••••••"
               className="w-full h-10 px-3 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-accent"
             />

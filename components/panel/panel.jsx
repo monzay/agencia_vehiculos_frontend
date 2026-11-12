@@ -42,7 +42,7 @@ const SECCIONES_CON_NOVEDADES = ["consultas", "clientes", "financiacion", "descu
 // Telegram: entra directo a Consultas con esa consulta ya abierta.
 export function Panel({ consultaId = null }) {
   const router = useRouter();
-  const [seccion, setSeccion] = useState(consultaId ? "consultas" : "resumen");
+  const [seccionElegida, setSeccion] = useState(consultaId ? "consultas" : "resumen");
   const [colapsada, setColapsada] = useState(false);
   const [menuMovil, setMenuMovil] = useState(false); // drawer del sidebar en móvil
   const [busqueda, setBusqueda] = useState("");
@@ -76,6 +76,8 @@ export function Panel({ consultaId = null }) {
   const [nuevoDesde, setNuevoDesde] = useState({}); // marca "congelada" al entrar (resalta filas)
 
   const esAdmin = usuario?.rol === "admin";
+  // Clientes es solo del admin: si un asesor llega con esa sección elegida, cae en Resumen.
+  const seccion = seccionElegida === "clientes" && !esAdmin ? "resumen" : seccionElegida;
 
   // Abre el legajo de una parte de pago: la piden Señas y Financiación.
   const abrirParteDePago = (id) => {
@@ -240,7 +242,7 @@ export function Panel({ consultaId = null }) {
                   onVerAvance={esAdmin ? verAvance : undefined}
                 />
               )}
-              {seccion === "clientes" && <SeccionClientes busqueda={busqueda} refrescar={refrescar} nuevoDesde={nuevoDesde.clientes} />}
+              {seccion === "clientes" && esAdmin && <SeccionClientes busqueda={busqueda} refrescar={refrescar} nuevoDesde={nuevoDesde.clientes} />}
               {seccion === "financiacion" && esAdmin && (
                 <SeccionFinanciacion busqueda={busqueda} refrescar={refrescar} onAbrirTramite={abrirParteDePago} />
               )}

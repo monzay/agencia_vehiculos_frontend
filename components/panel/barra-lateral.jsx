@@ -27,7 +27,7 @@ const items = [
   { id: "consultas", label: "Consultas", icon: MessageSquare },
   // Único lugar donde se crea una operación (seña, consignación, compra, venta).
   { id: "tramites", label: "Trámites", icon: FilePlus2, soloAdmin: true },
-  { id: "clientes", label: "Clientes", icon: Users },
+  { id: "clientes", label: "Clientes", icon: Users, soloAdmin: true },
   { id: "financiacion", label: "Financiación", icon: HandCoins, soloAdmin: true },
   { id: "senas", label: "Señas", icon: BookmarkCheck, soloAdmin: true },
   { id: "documentos", label: "Documentos", icon: FileText, soloAdmin: true },

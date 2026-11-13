@@ -15,6 +15,7 @@ import { ImportarLista } from "./vehiculos/importar-lista";
 import { EliminarVehiculo } from "./vehiculos/eliminar-vehiculo";
 import { TIPOS_VEHICULO, tipoVehiculo } from "@/lib/tipos-vehiculo";
 import { COMBUSTIBLES, etiquetaCombustible } from "@/lib/combustibles";
+import { IMAGENES_ADICIONALES_MAX, lugaresLibres, repartirElegidas, imagenesParaGuardar } from "@/lib/imagenes-vehiculo";
 
 // Límite de tamaño de imagen (debe coincidir con el del endpoint /api/blob/upload).
 const MAX_IMG_MB = 10;
@@ -193,10 +194,17 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
   }
 
   async function onImagenesGaleria(e) {
-    const files = [...(e.target.files || [])];
+    const elegidos = [...(e.target.files || [])];
+    e.target.value = "";
+    if (!elegidos.length) return;
+    const { entran: files, sobran } = repartirElegidas(form.imagenes, elegidos);
+    if (sobran.length) {
+      setError(`Un vehículo puede tener hasta ${IMAGENES_ADICIONALES_MAX} imágenes además de la principal. No se agregaron ${sobran.length}.`);
+    } else {
+      setError(null);
+    }
     if (!files.length) return;
     setSubiendoGaleria(true);
-    setError(null);
     try {
       const urls = [];
       for (const f of files) urls.push(await subirArchivo(f));
@@ -205,9 +213,10 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       setError(err.message);
     } finally {
       setSubiendoGaleria(false);
-      e.target.value = "";
     }
   }
+
+  const sinLugarGaleria = lugaresLibres(form.imagenes) === 0;
 
   function quitarImagen(url) {
     setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((u) => u !== url) }));
@@ -249,7 +258,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
       combustible: form.combustible,
       descripcion: form.descripcion,
       // La imagen principal va primera (el backend usa fotos_json[0] como principal).
-      imgs: [form.imagenPrincipal, ...form.imagenes].filter(Boolean),
+      imgs: imagenesParaGuardar(form.imagenPrincipal, form.imagenes),
     };
     try {
       if (editando) await actualizarVehiculo(editRef, payload);
@@ -678,11 +687,14 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     ))}
                   </div>
                 )}
-                <label className="cursor-pointer inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-sm hover:border-accent/50 transition-colors">
-                  {subiendoGaleria ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {subiendoGaleria ? "Subiendo…" : "Agregar imágenes"}
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={onImagenesGaleria} disabled={subiendoGaleria} />
-                </label>
+                <div className="flex items-center gap-3">
+                  <label className={`inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-sm transition-colors ${sinLugarGaleria ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-accent/50"}`}>
+                    {subiendoGaleria ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {subiendoGaleria ? "Subiendo…" : "Agregar imágenes"}
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={onImagenesGaleria} disabled={subiendoGaleria || sinLugarGaleria} />
+                  </label>
+                  <span className="text-xs text-muted-foreground">{form.imagenes.length} de {IMAGENES_ADICIONALES_MAX}</span>
+                </div>
               </div>
 
               {/* Sin marcar no sale en la web ni lo ofrece el bot. Los importados de una lista entran así. */}

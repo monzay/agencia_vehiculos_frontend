@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 
+// Para ver el sitio desde el celular en la red de casa: DEV_HOST_RED es la IP de
+// la PC (por ejemplo 192.168.100.27). Solo se usa en desarrollo; sin la variable
+// no cambia nada.
+const hostEnRed = process.env.NODE_ENV !== "production" ? process.env.DEV_HOST_RED : undefined;
+const apiEnRedLocal = hostEnRed ? ` http://${hostEnRed}:4000` : "";
+
 // CSP ESTRICTA para toda la app (panel, catálogo, financiación).
 const cspEstricta = [
   "default-src 'self'",
@@ -7,7 +13,7 @@ const cspEstricta = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: http://localhost:4000",
+  `connect-src 'self' https: http://localhost:4000${apiEnRedLocal}`,
   // El mapa de la portada es un iframe de Google Maps. Sin frame-src explícito
   // caería en default-src 'self' y quedaría bloqueado. Se listan solo los dos
   // orígenes que sirven el embed, no un https: abierto.
@@ -33,6 +39,7 @@ const nextConfig = {
   // el front revienta al hacer res.json(). Declarandolo externo, Next lo deja
   // como require() real y arrastra los binarios al bundle de la funcion.
   serverExternalPackages: ["sharp"],
+  ...(hostEnRed ? { allowedDevOrigins: [hostEnRed] } : {}),
   // Declararlo externo no alcanza: el tracer de Vercel no sigue los .node/.so
   // de @img/* y quedan fuera del bundle de la funcion. Se incluyen a mano.
   outputFileTracingIncludes: {

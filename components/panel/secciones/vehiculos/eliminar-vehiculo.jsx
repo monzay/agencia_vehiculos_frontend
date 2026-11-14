@@ -10,7 +10,7 @@ export function EliminarVehiculo({ vehiculo, onRecargar }) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
 
-  const nombre = `${vehiculo.brand} ${vehiculo.model}`;
+  const nombre = [vehiculo.brand, vehiculo.model, vehiculo.year].filter(Boolean).join(" ");
 
   async function eliminar() {
     setCargando(true);
@@ -41,7 +41,7 @@ export function EliminarVehiculo({ vehiculo, onRecargar }) {
         titulo="¿Eliminar este vehículo?"
         mensaje={
           <>
-            {`${nombre} (ref ${vehiculo.ref}) va a salir del catálogo y del panel.`}
+            {`${nombre} va a salir del catálogo y del panel.`}
             {error && <span className="block mt-2 text-destructive">{error}</span>}
           </>
         }

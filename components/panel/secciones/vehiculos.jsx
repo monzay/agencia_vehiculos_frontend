@@ -9,6 +9,7 @@ import {
   getToken,
 } from "@/lib/api";
 import { Overlay } from "../ui/overlay";
+import { numerarVehiculos } from "@/lib/vehiculos";
 import { fechaCorta } from "./senas/formato";
 import { Campo, CampoNumero } from "../ui/campo";
 import { ImportarLista } from "./vehiculos/importar-lista";
@@ -443,6 +444,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 text-muted-foreground">
               <tr className="text-left">
+                <th className="px-5 py-3 font-medium text-xs uppercase tracking-wide">N°</th>
                 <th className="px-5 py-3 font-medium text-xs uppercase tracking-wide">Vehículo</th>
                 <th className="px-5 py-3 font-medium text-xs uppercase tracking-wide">Año</th>
                 <th className="px-5 py-3 font-medium text-xs uppercase tracking-wide">Kms</th>
@@ -453,8 +455,9 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((v) => (
+              {numerarVehiculos(filtrados).map((v) => (
                 <tr key={v.ref} className="border-t border-border hover:bg-secondary/40 transition-colors">
+                  <td className="px-5 py-3.5 text-muted-foreground tabular-nums">{v.numero}</td>
                   <td className="px-5 py-3.5">
                     <button type="button" onClick={() => setDetalle(v)} title="Ver detalle del vehículo" className="flex items-center gap-3 text-left group">
                       <div className="w-12 h-9 rounded-md bg-secondary overflow-hidden shrink-0 flex items-center justify-center">
@@ -467,7 +470,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                       </div>
                       <div>
                         <p className="font-medium text-foreground group-hover:text-accent transition-colors">{v.brand} {v.model}{v.version ? ` ${v.version}` : ""}</p>
-                        <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · sin publicar"}</p>
+                        {!v.disponible && <p className="text-xs text-muted-foreground">Sin publicar</p>}
                       </div>
                     </button>
                   </td>
@@ -513,7 +516,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
         {filtrados.length === 0 ? (
           <p className="text-center py-14 text-sm text-muted-foreground rounded-xl border border-border bg-card">No hay vehículos que coincidan.</p>
         ) : (
-          filtrados.map((v) => (
+          numerarVehiculos(filtrados).map((v) => (
             <div key={v.ref} className="rounded-xl border border-border bg-card overflow-hidden">
               <button type="button" onClick={() => setDetalle(v)} title="Ver detalle del vehículo" className="w-full text-left flex gap-3 p-3 hover:bg-secondary/40 transition-colors">
                 <div className="w-24 h-16 rounded-md bg-secondary overflow-hidden shrink-0 flex items-center justify-center">
@@ -526,7 +529,7 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground truncate">{v.brand} {v.model}{v.version ? ` ${v.version}` : ""}</p>
-                  <p className="text-xs text-muted-foreground">REF {v.ref}{!v.disponible && " · sin publicar"}</p>
+                  <p className="text-xs text-muted-foreground">N° {v.numero}{!v.disponible && " · sin publicar"}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
                     <span>{v.year}</span>
                     <span>·</span>
@@ -761,7 +764,6 @@ export function SeccionVehiculos({ vehiculos, busqueda, onRecargar, esAdmin = fa
                     <span className="font-medium">{precioARS(detalle.precio)}</span>
                   )}
                 </Dato>
-                <Dato label="REF">{detalle.ref}</Dato>
               </div>
 
               {detalle.descripcion && (

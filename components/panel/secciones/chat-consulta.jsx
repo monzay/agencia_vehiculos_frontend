@@ -13,7 +13,7 @@ const MAX_TEXTO = 4096;
 // derecha (los dos "nuestros"), distinguidos por color e ícono.
 const AUTOR = {
   cliente: { etiqueta: "Cliente", icono: User, derecha: false, clase: "bg-card border-border" },
-  bot: { etiqueta: "Agustina (bot)", icono: Bot, derecha: true, clase: "bg-primary/10 border-primary/30" },
+  bot: { etiqueta: "José (bot)", icono: Bot, derecha: true, clase: "bg-primary/10 border-primary/30" },
   humano: { etiqueta: "Asesor", icono: Headset, derecha: true, clase: "bg-emerald-500/10 border-emerald-500/30" },
 };
 

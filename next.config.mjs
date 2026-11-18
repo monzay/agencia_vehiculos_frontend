@@ -11,7 +11,8 @@ const cspEstricta = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
+  // En desarrollo, las fotos del Blob simulado salen del backend local (http://localhost:4000/api/dev/blob-simulado/...).
+  `img-src 'self' data: blob: https:${process.env.NODE_ENV !== "production" ? ` http://localhost:4000${apiEnRedLocal}` : ""}`,
   "font-src 'self' data:",
   `connect-src 'self' https: http://localhost:4000${apiEnRedLocal}`,
   // El mapa de la portada es un iframe de Google Maps. Sin frame-src explícito

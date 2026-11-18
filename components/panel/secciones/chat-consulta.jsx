@@ -4,6 +4,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send, Bot, User, Headset, RotateCcw, AlertTriangle } from "lucide-react";
 import { obtenerConsulta, enviarMensajeConsulta, devolverABot } from "@/lib/api";
 import { Boton } from "../ui/boton";
+import { fotosDelUsado } from "@/lib/fotos-usado";
+
+// Miniatura de una foto del usado; al tocarla se abre en grande en otra pestaña.
+// Si la URL firmada venció (o no carga) se muestra un recuadro neutro del mismo tamaño.
+function MiniaturaUsado({ url, n }) {
+  const [fallo, setFallo] = useState(false);
+  if (fallo) {
+    return (
+      <span className="flex h-16 w-16 items-center justify-center rounded-md border border-border bg-secondary/40 text-[10px] text-muted-foreground text-center">
+        Foto {n} no disponible
+      </span>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" title={`Ver la foto del usado ${n} en grande`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={`Foto del usado ${n}`}
+        loading="lazy"
+        onError={() => setFallo(true)}
+        className="h-16 w-16 rounded-md border border-border object-cover"
+      />
+    </a>
+  );
+}
 
 // Cada cuánto se repregunta el chat mientras está abierto, para ver llegar al cliente en vivo.
 const POLL_MS = 4000;
@@ -111,11 +137,12 @@ export function ChatConsulta({ sesionId }) {
   }
 
   const { chat = [], respuestas = [], botPausado, ventanaAbierta } = detalle;
+  const fotosUsado = fotosDelUsado(detalle);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       {/* Lo que el bot ya averiguó (respuestas estructuradas). Con scroll propio: el chat es lo principal. */}
-      {respuestas.length > 0 && (
+      {(respuestas.length > 0 || fotosUsado.length > 0) && (
         <details open className="shrink-0 rounded-lg border border-border bg-card/50">
           <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Datos de la consulta ({respuestas.length})
@@ -127,6 +154,16 @@ export function ChatConsulta({ sesionId }) {
                 <span className="text-foreground font-medium">{r.respuesta}</span>
               </p>
             ))}
+            {fotosUsado.length > 0 && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Fotos del usado ({fotosUsado.length}): </span>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {fotosUsado.map((url, i) => (
+                    <MiniaturaUsado key={url} url={url} n={i + 1} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </details>
       )}

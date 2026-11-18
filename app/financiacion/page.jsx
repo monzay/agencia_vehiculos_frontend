@@ -97,6 +97,9 @@ export default function PaginaConsultaFinanciacion() {
           </div>
         )}
       </div>
+      <p className="mt-8 text-center">
+        <a href="/privacidad" className="text-xs text-muted-foreground hover:text-foreground">Política de privacidad</a>
+      </p>
     </main>
   );
 }

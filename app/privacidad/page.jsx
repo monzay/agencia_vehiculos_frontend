@@ -1,8 +1,8 @@
 import { Navegacion } from "@/components/inicio/navegacion";
 import { SeccionPie } from "@/components/inicio/seccion-pie";
 
-// Página pública a la que el bot manda al cliente antes de pedirle permiso para
-// consultar al BCRA. El texto lo publica la agencia desde el panel (por versiones)
+// Página pública de la política de privacidad, enlazada en el pie de la web.
+// El bot pasa el link solo si el cliente pregunta qué se hace con sus datos. El texto lo publica la agencia desde el panel (por versiones)
 // y se muestra como texto plano: React lo escapa, nunca se interpreta como HTML.
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";

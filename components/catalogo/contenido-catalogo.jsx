@@ -128,6 +128,8 @@ function ContenidoCatalogo() {
   const subtitleMap = {
     todos: "disponibles.",
     auto:  "en autos.",
+    camioneta: "en camionetas.",
+    camion: "en camiones.",
     moto:  "en motos.",
   };
 

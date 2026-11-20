@@ -25,6 +25,16 @@ const TAMANOS = {
   icono: "h-9 w-9 justify-center rounded-lg text-sm",
 };
 
+// Clases del botón, para reutilizarlas en elementos que no pueden ser un <button> (p. ej. un <a>).
+export function clasesBoton({ variante = "secundario", tamano = "md", className } = {}) {
+  return cn(
+    "inline-flex items-center font-medium transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+    VARIANTES[variante],
+    TAMANOS[tamano],
+    className
+  );
+}
+
 export function Boton({
   children,
   variante = "secundario",
@@ -39,12 +49,7 @@ export function Boton({
     <button
       type={type}
       disabled={disabled || cargando}
-      className={cn(
-        "inline-flex items-center font-medium transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-        VARIANTES[variante],
-        TAMANOS[tamano],
-        className
-      )}
+      className={clasesBoton({ variante, tamano, className })}
       {...props}
     >
       {cargando && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}

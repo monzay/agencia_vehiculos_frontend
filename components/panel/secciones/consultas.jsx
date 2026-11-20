@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Phone, Car, Tag, User, UserCheck, Loader2, ChevronRight, CheckCircle2, Circle, MapPin, BellRing, Landmark, ArrowRight,
+  Phone, Car, Tag, User, UserCheck, Loader2, ChevronRight, CheckCircle2, Circle, MapPin, BellRing, Landmark, ArrowRight, MessageCircle,
 } from "lucide-react";
+import { urlWhatsAppCliente } from "@/lib/constantes";
 import { obtenerConsultas, marcarConsultaAtendida } from "@/lib/api";
 import { usarListaPaginada } from "@/hooks/usar-lista-paginada";
 import { combinadorClases as cn } from "@/lib/utilidades";
-import { Boton } from "../ui/boton";
+import { Boton, clasesBoton } from "../ui/boton";
 import { Tabla, FILA, CELDA } from "../ui/tabla";
 import { Insignia } from "../ui/insignia";
 import { PanelLateral } from "../ui/panel-lateral";
@@ -184,6 +185,7 @@ export function SeccionConsultas({ busqueda, nuevoDesde = null, abrirId = null, 
 
   // Puede no estar en la lista si llegó por link y todavía no se cargó esa página.
   const consultaAbierta = items.find((c) => c.sesionId === consultaAbiertaId);
+  const whatsappAbierta = urlWhatsAppCliente(consultaAbierta?.whatsapp);
 
   // Link directo del aviso de Telegram (/admin/<sesionId>): abre esa consulta sola.
   useEffect(() => {
@@ -377,6 +379,18 @@ export function SeccionConsultas({ busqueda, nuevoDesde = null, abrirId = null, 
               <Insignia variante="info"><UserCheck className="w-3 h-3" /> {consultaAbierta.asesor}</Insignia>
             )}
             {botonAtendido(consultaAbierta)}
+            {whatsappAbierta && (
+              // Es un <a> y no un Boton: un <button> no puede llevar el link.
+              <a
+                href={whatsappAbierta}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={consultaAbierta.nombre ? `Abrir WhatsApp de ${consultaAbierta.nombre}` : "Abrir WhatsApp del cliente"}
+                className={clasesBoton({ variante: "secundario", tamano: "sm", className: "gap-1.5" })}
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+              </a>
+            )}
             {consultaAbierta.avance
               ? onVerAvance && (
                   <Boton variante="secundario" tamano="sm" className="gap-1.5" onClick={() => onVerAvance(consultaAbierta.avance)}>

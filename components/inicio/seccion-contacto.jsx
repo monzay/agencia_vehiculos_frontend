@@ -6,6 +6,7 @@ import { usarEnVista } from "@/hooks/usar-en-vista";
 import { INFO_NEGOCIO, ENLACES_SOCIALES } from "@/lib/constantes";
 import { usarUrlWhatsAppBot } from "@/hooks/usar-url-whatsapp-bot";
 import { obtenerUbicacion, obtenerHorarios } from "@/lib/api";
+import { textoDelDia } from "@/lib/horarios";
 
 // Dirección, horarios y coordenadas salen ÚNICAMENTE de la base (los edita el
 // admin en Configuración). Si no hay registro cargado, la fila no se muestra:
@@ -23,9 +24,7 @@ function lineasDeHorarios(horarios) {
   if (!horarios.length) return [];
   const porDia = new Map(horarios.map((h) => [h.dia, h]));
   return ORDEN.map((dia) => {
-    const h = porDia.get(dia);
-    const detalle = h?.abierto && h.apertura && h.cierre ? `${h.apertura} - ${h.cierre}` : "Cerrado";
-    return `${NOMBRE_DIA[dia]}: ${detalle}`;
+    return `${NOMBRE_DIA[dia]}: ${textoDelDia(porDia.get(dia))}`;
   });
 }
 

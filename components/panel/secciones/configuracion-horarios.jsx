@@ -9,44 +9,7 @@ import { Boton } from "@/components/interfaz/boton";
 import { Input } from "@/components/interfaz/entrada";
 import { Switch } from "@/components/interfaz/interruptor";
 import { Alert, AlertDescription } from "@/components/interfaz/alerta";
-
-// Orden de visualización: la semana arranca en lunes. `dia` sigue getDay() (0=Dom),
-// que es lo que guarda y lee el backend/bot.
-const ORDEN = [
-  { dia: 1, nombre: "Lunes" },
-  { dia: 2, nombre: "Martes" },
-  { dia: 3, nombre: "Miércoles" },
-  { dia: 4, nombre: "Jueves" },
-  { dia: 5, nombre: "Viernes" },
-  { dia: 6, nombre: "Sábado" },
-  { dia: 0, nombre: "Domingo" },
-];
-
-const POR_DEFECTO = { abierto: false, apertura: "09:00", cierre: "18:00" };
-
-// De la lista del backend a un mapa { [dia]: {abierto, apertura, cierre} } listo
-// para editar. Las horas quedan siempre como string para los inputs, aunque el
-// día esté cerrado (así el admin no pierde lo escrito al togglear).
-function aFormulario(horarios) {
-  const mapa = {};
-  for (const { dia } of ORDEN) {
-    const h = horarios?.find((x) => x.dia === dia);
-    mapa[dia] = h
-      ? { abierto: h.abierto, apertura: h.apertura || "09:00", cierre: h.cierre || "18:00" }
-      : { ...POR_DEFECTO };
-  }
-  return mapa;
-}
-
-function validar(mapa) {
-  for (const { dia, nombre } of ORDEN) {
-    const d = mapa[dia];
-    if (!d.abierto) continue;
-    if (!d.apertura || !d.cierre) return `Completá el horario del ${nombre}.`;
-    if (d.apertura >= d.cierre) return `El ${nombre} la apertura debe ser anterior al cierre.`;
-  }
-  return null;
-}
+import { ORDEN, aFormulario, aPayload, apagarCortado, prenderCortado, validarHorarios } from "@/lib/horarios";
 
 export function TarjetaHorarios({ horarios, onHorarios }) {
   const [mapa, setMapa] = useState(() => aFormulario(horarios));
@@ -65,23 +28,22 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
     setOk(false);
   };
 
+  const cambiarCortado = (dia, prendido) => {
+    setMapa((m) => ({ ...m, [dia]: prendido ? prenderCortado(m[dia]) : apagarCortado(m[dia]) }));
+    setOk(false);
+  };
+
   async function enviar(e) {
     e.preventDefault();
     setError(null);
     setOk(false);
 
-    const problema = validar(mapa);
+    const problema = validarHorarios(mapa);
     if (problema) return setError(problema);
 
     setGuardando(true);
     try {
-      const dias = ORDEN.map(({ dia }) => {
-        const d = mapa[dia];
-        return d.abierto
-          ? { dia, abierto: true, apertura: d.apertura, cierre: d.cierre }
-          : { dia, abierto: false, apertura: null, cierre: null };
-      });
-      const guardados = await guardarHorarios(dias);
+      const guardados = await guardarHorarios(aPayload(mapa));
       onHorarios?.(guardados);
       setOk(true);
     } catch (err) {
@@ -97,7 +59,7 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
         icon={Clock}
         iconClassName="text-white"
         titulo="Horarios de atención"
-        descripcion="El bot los usa para responder si la agencia está abierta. Apagá el día para marcarlo cerrado."
+        descripcion="El bot los usa para responder si la agencia está abierta. Apagá el día para marcarlo cerrado; si cierra al mediodía, activá Cortado para cargar la segunda franja."
       />
 
       <form onSubmit={enviar}>
@@ -112,25 +74,58 @@ export function TarjetaHorarios({ horarios, onHorarios }) {
                 <span className="w-24 text-sm text-foreground">{nombre}</span>
                 <Switch checked={d.abierto} onCheckedChange={(v) => set(dia, "abierto", v)} disabled={guardando} />
                 {d.abierto ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      aria-label={`Apertura ${nombre}`}
-                      value={d.apertura}
-                      onChange={(e) => set(dia, "apertura", e.target.value)}
-                      disabled={guardando}
-                      className="w-32 scheme-dark"
-                    />
-                    <span className="text-sm text-muted-foreground">a</span>
-                    <Input
-                      type="time"
-                      aria-label={`Cierre ${nombre}`}
-                      value={d.cierre}
-                      onChange={(e) => set(dia, "cierre", e.target.value)}
-                      disabled={guardando}
-                      className="w-32 scheme-dark"
-                    />
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        aria-label={`Apertura ${nombre}`}
+                        value={d.apertura}
+                        onChange={(e) => set(dia, "apertura", e.target.value)}
+                        disabled={guardando}
+                        className="w-32 scheme-dark"
+                      />
+                      <span className="text-sm text-muted-foreground">a</span>
+                      <Input
+                        type="time"
+                        aria-label={`Cierre ${nombre}`}
+                        value={d.cierre}
+                        onChange={(e) => set(dia, "cierre", e.target.value)}
+                        disabled={guardando}
+                        className="w-32 scheme-dark"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Switch
+                        checked={d.cortado}
+                        onCheckedChange={(v) => cambiarCortado(dia, v)}
+                        disabled={guardando}
+                        aria-label={`Horario cortado ${nombre}`}
+                      />
+                      Cortado
+                    </label>
+                    {d.cortado && (
+                      <div className="flex basis-full items-center gap-2 sm:pl-32">
+                        <span className="w-4 text-right text-sm text-muted-foreground">y</span>
+                        <Input
+                          type="time"
+                          aria-label={`Apertura tarde ${nombre}`}
+                          value={d.apertura_2}
+                          onChange={(e) => set(dia, "apertura_2", e.target.value)}
+                          disabled={guardando}
+                          className="w-32 scheme-dark"
+                        />
+                        <span className="text-sm text-muted-foreground">a</span>
+                        <Input
+                          type="time"
+                          aria-label={`Cierre tarde ${nombre}`}
+                          value={d.cierre_2}
+                          onChange={(e) => set(dia, "cierre_2", e.target.value)}
+                          disabled={guardando}
+                          className="w-32 scheme-dark"
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <span className="text-sm text-muted-foreground">Cerrado</span>
                 )}

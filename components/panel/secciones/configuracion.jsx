@@ -5,6 +5,7 @@ import { UserCog, Lock, Scale, Users } from "lucide-react";
 import { actualizarMiPerfil, actualizarConfig, actualizarAsesor } from "@/lib/api";
 import { TarjetaUbicacion } from "./configuracion-ubicacion";
 import { TarjetaHorarios } from "./configuracion-horarios";
+import { TarjetaCondiciones } from "./configuracion-condiciones";
 import { TarjetaCredito } from "./configuracion-credito";
 import { GrupoConfig, CabeceraTarjeta } from "./configuracion-ui";
 import { Card, CardContent, CardFooter } from "@/components/interfaz/tarjeta";
@@ -128,6 +129,7 @@ export function SeccionConfiguracion({ usuario, onUsuario, config, onConfig, ubi
       <GrupoConfig titulo="La agencia" descripcion="Datos que el bot comparte con los clientes.">
         <TarjetaUbicacion ubicacion={ubicacion} onUbicacion={onUbicacion} />
         <TarjetaHorarios horarios={horarios} onHorarios={onHorarios} />
+        <TarjetaCondiciones />
       </GrupoConfig>
 
       {/* Automatización */}

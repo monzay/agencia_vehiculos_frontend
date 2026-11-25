@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Handshake, Plus, X } from "lucide-react";
 import { obtenerCondicionesVenta, guardarCondicionesVenta } from "@/lib/api";
-import { aOpcion, armarEnvio, deOpcion, hayCambios, validarCondiciones, validarNombreNuevo } from "@/lib/condiciones-venta";
+import { aOpcion, armarEnvio, cambiarGarantia, deOpcion, hayCambios, validarCondiciones, validarNombreNuevo } from "@/lib/condiciones-venta";
 import { CabeceraTarjeta } from "./configuracion-ui";
 import { CLASE_INPUT } from "../ui/campo";
 import { cn } from "@/lib/utilidades";
@@ -113,6 +113,24 @@ function CampoDetalle({ id, etiqueta, ejemplo, valor, onCambio }) {
   );
 }
 
+function CampoRespuestaGarantia({ valor, onCambio, ayudaId }) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor="cv-garantia-respuesta">Qué responde el bot si preguntan por la garantía</Label>
+      <textarea
+        id="cv-garantia-respuesta"
+        rows={3}
+        maxLength={200}
+        value={valor ?? ""}
+        placeholder="Antes de decidir podés traer a tu mecánico de confianza para que lo revise."
+        aria-describedby={ayudaId}
+        onChange={(e) => onCambio(e.target.value)}
+        className={cn(CLASE_INPUT, "py-2")}
+      />
+    </div>
+  );
+}
+
 export function TarjetaCondiciones() {
   const [original, setOriginal] = useState(null);
   const [estado, setEstado] = useState(VACIO);
@@ -123,6 +141,11 @@ export function TarjetaCondiciones() {
 
   const cambiar = (campo, valor) => {
     setEstado((e) => ({ ...e, [campo]: valor }));
+    setOk(false);
+    setError(null);
+  };
+  const cambiarOpcionGarantia = (valor) => {
+    setEstado((e) => cambiarGarantia(original, e, valor));
     setOk(false);
     setError(null);
   };
@@ -212,7 +235,16 @@ export function TarjetaCondiciones() {
           <Separator />
 
           <div className="space-y-4">
-            <SelectSiNo id="cv-garantia" etiqueta="¿Da garantía propia?" valor={estado.garantia} onCambio={(v) => cambiar("garantia", v)} />
+            <SelectSiNo id="cv-garantia" etiqueta="¿Da garantía propia?" valor={estado.garantia} onCambio={cambiarOpcionGarantia} />
+            {estado.garantia !== null && (
+              <p id="cv-garantia-ayuda" className="text-xs text-muted-foreground">
+                Vale para los usados: los 0 km llevan la garantía de fábrica.
+                {estado.garantia === false && " Si lo dejás vacío, el bot dice que la garantía la explica el asesor."}
+              </p>
+            )}
+            {estado.garantia === false && (
+              <CampoRespuestaGarantia valor={estado.garantiaDetalle} onCambio={(v) => cambiar("garantiaDetalle", v)} ayudaId="cv-garantia-ayuda" />
+            )}
             {estado.garantia === true && (
               <CampoDetalle
                 id="cv-garantia-detalle"

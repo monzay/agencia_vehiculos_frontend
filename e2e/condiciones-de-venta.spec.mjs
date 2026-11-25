@@ -147,26 +147,52 @@ test("un banco repetido o un nombre vacío muestran el error y no mandan ningún
   expect(puts).toEqual([]);
 });
 
-test("detalle con Sí: el campo del detalle de la garantía aparece solo con Sí", async ({ page }) => {
+test("garantía: con Sí aparece el detalle, con No la respuesta del bot y con Sin definir ningún campo", async ({ page }) => {
   await preparar();
   const tarjeta = await abrirConfiguracion(page, tokenAdmin);
   const garantia = tarjeta.getByLabel("¿Da garantía propia?");
   const detalle = tarjeta.getByLabel("Detalle de la garantía");
+  const respuesta = tarjeta.getByLabel("Qué responde el bot si preguntan por la garantía");
+  const aclaracion = tarjeta.getByText("Vale para los usados: los 0 km llevan la garantía de fábrica.");
 
+  await expect(aclaracion).toHaveCount(0);
   await garantia.selectOption({ label: "Sí" });
   await expect(detalle).toBeVisible();
+  await expect(respuesta).toHaveCount(0);
+  await expect(aclaracion).toBeVisible();
 
   await garantia.selectOption({ label: "No" });
   await expect(detalle).toHaveCount(0);
+  await expect(respuesta).toBeVisible();
+  await expect(tarjeta.getByText("Si lo dejás vacío, el bot dice que la garantía la explica el asesor.")).toBeVisible();
 
   await garantia.selectOption({ label: "Sin definir" });
   await expect(detalle).toHaveCount(0);
+  await expect(respuesta).toHaveCount(0);
+  await expect(aclaracion).toHaveCount(0);
 
   const usados = tarjeta.getByLabel("¿Recibe usados como parte de pago?");
   await usados.selectOption({ label: "Sí" });
   await expect(tarjeta.getByLabel("Detalle de los usados")).toBeVisible();
   await usados.selectOption({ label: "No" });
   await expect(tarjeta.getByLabel("Detalle de los usados")).toHaveCount(0);
+});
+
+test("garantía en No: la respuesta del bot se guarda y sigue al recargar", async ({ page }) => {
+  await preparar();
+  const tarjeta = await abrirConfiguracion(page, tokenAdmin);
+  const texto = "Podés traer a tu mecánico de confianza para que revise el auto.";
+
+  await tarjeta.getByLabel("¿Da garantía propia?").selectOption({ label: "No" });
+  await tarjeta.getByLabel("Qué responde el bot si preguntan por la garantía").fill(texto);
+  await tarjeta.getByRole("button", { name: "Guardar condiciones" }).click();
+  await expect(page.getByText("Condiciones actualizadas")).toBeVisible();
+  expect((await leer(tokenAdmin)).garantiaDetalle).toBe(texto);
+
+  await page.reload();
+  const recargada = await abrirConfiguracion(page, tokenAdmin);
+  await expect(recargada.getByLabel("¿Da garantía propia?")).toHaveValue("no");
+  await expect(recargada.getByLabel("Qué responde el bot si preguntan por la garantía")).toHaveValue(texto);
 });
 
 test("un asesor no ve la sección Configuración, así que no ve la tarjeta", async ({ page }) => {
